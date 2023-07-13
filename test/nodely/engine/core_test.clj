@@ -6,7 +6,7 @@
             [nodely.data :as data]
             [nodely.engine.core :as core]
             [nodely.fixtures :as fixtures]
-            [nodely.syntax :as syntax :refer [>cond >leaf]]
+            [nodely.syntax :as syntax :refer [>cond >leaf >if]]
             [schema.test]))
 
 (use-fixtures :once schema.test/validate-schemas)
@@ -232,5 +232,13 @@
                             (core/dependencies-for % env))
                         (keys env))))
 
+(def tricky-env-without-cycles {:d (>if (>leaf ?c) (>leaf ?e) (>leaf ?f))
+                                :f (>if (>leaf ?c) 1 (>leaf ?e))
+                                :e (>if (>leaf ?c) (>leaf ?f) 1)
+                                :c (>leaf (even? (rand-int)))})
+
 (deftest checked-env-throws-on-cycle-eval
-  (is (thrown? clojure.lang.Compiler$CompilerException (eval `(core/checked-env env-with-cycle)))))
+  (testing "there is a cycle in the env and checked-env detects it"
+    (is (thrown? clojure.lang.Compiler$CompilerException (eval `(core/checked-env env-with-cycle)))))
+  (testing "there is no cycle but checked-env reports there is"
+    (is (thrown? clojure.lang.Compiler$CompilerException (eval `(core/checked-env tricky-env-without-cycles))))))
