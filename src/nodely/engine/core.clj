@@ -317,13 +317,18 @@
 ;;
 
 (defn check-env
-  "Returns nil if there is cycle. Returns a map with useful information if there is no cycle"
+  "Returns nil if there is no cycle. Returns a map with useful information if there is no cycle"
   [env]
-  (alg/topsort (env->graph-v2 env)))
+  (if (nil? (alg/topsort (env->graph-v2 env)))
+    (try (doseq [k (keys env)]
+           (all-paths-for-node k env))
+         (catch clojure.lang.ExceptionInfo e
+           (ex-data e)))
+    nil))
 
 (defmacro checked-env
   "Checks env at macro expansion time, raising an exception if checks fail."
   [env]
-  (if (check-env (clojure.core/eval env))
+  (if (nil? (check-env (clojure.core/eval env)))
     env
     (throw (ex-info "Checked-env found cycles at compile time" {:env env}))))
