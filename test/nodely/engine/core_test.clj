@@ -239,6 +239,6 @@
 
 (deftest checked-env-throws-on-cycle-eval
   (testing "there is a cycle in the env and checked-env detects it"
-    (is (thrown? clojure.lang.Compiler$CompilerException (eval `(core/checked-env env-with-cycle)))))
+    (is (thrown? clojure.lang.ExceptionInfo (core/checked-env env-with-cycle))))
   (testing "there is no cycle but checked-env reports there is"
-    (is (thrown? clojure.lang.Compiler$CompilerException (eval `(core/checked-env tricky-env-without-cycles))))))
+    (is (thrown? clojure.lang.ExceptionInfo (core/checked-env tricky-env-without-cycles)))))

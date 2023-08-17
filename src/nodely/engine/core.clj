@@ -305,16 +305,18 @@
 (defn check-env
   "Returns nil if there is cycle. Returns a map with useful information if there is no cycle"
   ([k env]
-   (try (dependencies-for k env) nil
+   (try (dependencies-for k env)
+        nil
         (catch clojure.lang.ExceptionInfo e
           (ex-data e))))
   ([env]
-   (for [k (keys env)]
-     (check-env k env))))
+   (some identity
+         (for [k (keys env)]
+           (check-env k env)))))
 
-(defmacro checked-env
-  "Checks env at macro expansion time, raising an exception if checks fail."
+(defn checked-env
+  "Checks env, raising an exception if checks fail."
   [env]
   (if (check-env env)
-    env
-    (throw (ex-info "Checked-env found cycles at compile time" {:env env}))))
+    (throw (ex-info "Checked-env found cycles at compile time" {:env env}))
+    env))

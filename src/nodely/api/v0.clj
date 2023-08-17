@@ -2,6 +2,7 @@
   (:refer-clojure :exclude [cond eval])
   (:require [nodely.data]
             [nodely.engine.applicative :as applicative]
+            [nodely.engine.core :as engine-core]
             [nodely.engine.core-async.core]
             [nodely.engine.core-async.iterative-scheduling :as iterative-scheduling]
             [nodely.engine.core-async.lazy-scheduling :as lazy-scheduling]
@@ -21,7 +22,8 @@
              nodely.data/value
              nodely.data/leaf
              nodely.data/sequence
-             nodely.data/branch)
+             nodely.data/branch
+             engine-core/checked-env)
 
 (import-fn nodely.engine.lazy/eval-node-with-values eval-node-with-values)
 (import-fn nodely.data/merge-values merge-values)
