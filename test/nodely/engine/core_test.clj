@@ -233,9 +233,9 @@
                         (keys env))))
 
 (def tricky-env-without-cycles {:d (>if (>leaf ?c) (>leaf ?e) (>leaf ?f))
-                                :f (>if (>leaf ?c) 1 (>leaf ?e))
-                                :e (>if (>leaf ?c) (>leaf ?f) 1)
-                                :c (>leaf (even? (rand-int)))})
+                                :f (>if (>leaf ?c) :it-was-even! (>leaf ?e))
+                                :e (>if (>leaf ?c) (>leaf ?f) :it-was-odd!)
+                                :c (>leaf (even? (rand-int 2)))})
 
 (deftest checked-env-throws-on-cycle-eval
   (testing "there is a cycle in the env and checked-env detects it"
