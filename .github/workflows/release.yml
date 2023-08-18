@@ -55,7 +55,7 @@ jobs:
       run: lein deps
 
     - name: Publish on Clojars
-      run: lein deploy publish
+      run: lein deploy clojars
       env:
           CLOJARS_USERNAME: eng-prod-nubank
           CLOJARS_PASSWD: ${{ secrets.CLOJARS_DEPLOY_TOKEN }}
