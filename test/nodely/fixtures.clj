@@ -1,6 +1,7 @@
 (ns nodely.fixtures
-  (:require [clojure.test.check.generators :as gen]
-            [nodely.data :as data]))
+  (:require
+   [clojure.test.check.generators :as gen]
+   [nodely.data :as data]))
 
 (defn branch-count
   [env]

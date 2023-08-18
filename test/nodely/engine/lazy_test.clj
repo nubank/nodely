@@ -1,9 +1,10 @@
 (ns nodely.engine.lazy-test
   (:refer-clojure :exclude [eval resolve])
-  (:require [clojure.test :refer :all]
-            [matcher-combinators.test :refer [match?]]
-            [nodely.data :as data]
-            [nodely.engine.lazy :as lazy]))
+  (:require
+   [clojure.test :refer :all]
+   [matcher-combinators.test :refer [match?]]
+   [nodely.data :as data]
+   [nodely.engine.lazy :as lazy]))
 
 (deftest eval-node
   (testing "eval"

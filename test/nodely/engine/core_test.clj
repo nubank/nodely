@@ -1,13 +1,14 @@
 (ns nodely.engine.core-test
-  (:require [clojure.test :refer :all]
-            [clojure.test.check.clojure-test :refer [defspec]]
-            [clojure.test.check.properties :as prop]
-            [matcher-combinators.test :refer [match? thrown-match?]]
-            [nodely.data :as data]
-            [nodely.engine.core :as core]
-            [nodely.fixtures :as fixtures]
-            [nodely.syntax :as syntax :refer [>cond >leaf >if]]
-            [schema.test]))
+  (:require
+   [clojure.test :refer :all]
+   [clojure.test.check.clojure-test :refer [defspec]]
+   [clojure.test.check.properties :as prop]
+   [matcher-combinators.test :refer [match? thrown-match?]]
+   [nodely.data :as data]
+   [nodely.engine.core :as core]
+   [nodely.fixtures :as fixtures]
+   [nodely.syntax :as syntax :refer [>cond >leaf >if]]
+   [schema.test]))
 
 (use-fixtures :once schema.test/validate-schemas)
 
@@ -19,10 +20,10 @@
 
 (def test-env+cond
   (assoc test-env
-    :z (>cond
-        (>leaf (odd? ?c)) (>leaf [?c ?b])
-        :else :nothing-else-matters)
-    :target (>leaf ?z)))
+         :z (>cond
+             (>leaf (odd? ?c)) (>leaf [?c ?b])
+             :else :nothing-else-matters)
+         :target (>leaf ?z)))
 
 (def simple-env {:x (data/value 2)
                  :y (data/leaf [:x] (fn [{:keys [x]}] (* 2 x)))
@@ -214,17 +215,17 @@
 (defspec all-paths-for-node-doesnt-blow-up-spec
   {:num-tests 30}
   (prop/for-all [env (fixtures/env-gen {:max-branch-count 20})]
-    (core/all-paths-for-node (first (keys env)) env)))
+                (core/all-paths-for-node (first (keys env)) env)))
 
 (defspec all-paths-for-node-dags-without-branches-have-only-one-path-spec
   (prop/for-all [env (fixtures/env-gen {:node-generator fixtures/scalar-gen})]
-    (let [results (map #(core/all-paths-for-node % env) (keys env))]
-      (every? #(= (count %) 1) results))))
+                (let [results (map #(core/all-paths-for-node % env) (keys env))]
+                  (every? #(= (count %) 1) results))))
 
 (defspec commited-dependencies-doesnt-blow-up-spec
   {:num-tests 30}
   (prop/for-all [env (fixtures/env-gen {:max-branch-count 20})]
-    (core/committed-dependencies (first (keys env)) env)))
+                (core/committed-dependencies (first (keys env)) env)))
 
 (defspec commited-dependencies-of-dags-without-branches-are-the-transitive-dependencies-of-target-spec
   (prop/for-all [env (fixtures/env-gen {:node-generator fixtures/scalar-gen})]

@@ -1,15 +1,16 @@
 (ns nodely.api.v0
   (:refer-clojure :exclude [cond eval])
-  (:require [nodely.data]
-            [nodely.engine.applicative :as applicative]
-            [nodely.engine.core :as engine-core]
-            [nodely.engine.core-async.core]
-            [nodely.engine.core-async.iterative-scheduling :as iterative-scheduling]
-            [nodely.engine.core-async.lazy-scheduling :as lazy-scheduling]
-            [nodely.engine.lazy]
-            [nodely.engine.manifold]
-            [nodely.syntax]
-            [nodely.vendor.potemkin :refer [import-fn import-vars]]))
+  (:require
+   [nodely.data]
+   [nodely.engine.applicative :as applicative]
+   [nodely.engine.core :as engine-core]
+   [nodely.engine.core-async.core]
+   [nodely.engine.core-async.iterative-scheduling :as iterative-scheduling]
+   [nodely.engine.core-async.lazy-scheduling :as lazy-scheduling]
+   [nodely.engine.lazy]
+   [nodely.engine.manifold]
+   [nodely.syntax]
+   [nodely.vendor.potemkin :refer [import-fn import-vars]]))
 
 (import-vars nodely.syntax/>cond
              nodely.syntax/>if

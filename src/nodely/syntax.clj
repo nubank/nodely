@@ -1,6 +1,7 @@
 (ns nodely.syntax
-  (:require [clojure.string :as string]
-            [nodely.data :as data]))
+  (:require
+   [clojure.string :as string]
+   [nodely.data :as data]))
 
 (defn- expression-symbols
   [expr]

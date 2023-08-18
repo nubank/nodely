@@ -1,12 +1,13 @@
 (ns nodely.engine.manifold-test
   (:refer-clojure :exclude [eval async])
-  (:require [clojure.test :refer :all]
-            [criterium.core :refer [time-body]]
-            [matcher-combinators.matchers :as matchers]
-            [matcher-combinators.test :refer [match?]]
-            [nodely.engine.core :as core]
-            [nodely.engine.manifold :as manifold]
-            [nodely.syntax :as syntax :refer [>leaf]]))
+  (:require
+   [clojure.test :refer :all]
+   [criterium.core :refer [time-body]]
+   [matcher-combinators.matchers :as matchers]
+   [matcher-combinators.test :refer [match?]]
+   [nodely.engine.core :as core]
+   [nodely.engine.manifold :as manifold]
+   [nodely.syntax :as syntax :refer [>leaf]]))
 
 (def test-env {:a (>leaf (+ 1 2))
                :b (>leaf (* ?a 2))
