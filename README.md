@@ -44,7 +44,7 @@ Nodely _environments_ are similar to DAGs in the following ways:
   expression creates a single unambiguous direction for the edge.
 - The graph may not contain cycles: Nodely uses a dependency
   resolution process to evaluate nodes. If Nodely accepted and
-  attempted to evaluate a cycle, it would loop indefinitely.
+  attempted to evaluate a cycle, it would loop indefinitely (see [Cycle Detection](#cycle-detection)).
 - The combination of nodes and their dependencies instructs Nodely how
   to evaluate some target node.
 
@@ -54,6 +54,32 @@ uncertainty of the graph that may not be resolved until run time. By
 expressing branches; Nodely allows for conditional dependencies that
 defer evaluation until run time checks have determined it is necessary
 to evaluate a dependency.
+
+### Cycle Detection
+
+Nodely provides a handy function to detect cycles in _environments_.
+
+
+To detect cycles in your graph, run the following code:
+
+```clj
+(nodely.api.v0/checked-env env) ;; do not leave this running in production!
+```
+
+Please note that the `checked-env` function will throw when a cycle has been detected.
+
+It's important to be aware that this function may sometimes produce false positives when dealing with graphs that contain mutually exclusive conditions. Here's an example where the function might produce a false positive:
+
+```clj
+(def mutually-exclusive-env-without-cycles
+  {:f (>if (>leaf ?c) :it-was-even! (>leaf ?e))
+   :e (>if (>leaf ?c) (>leaf ?f) :it-was-odd!)
+   :c (>leaf (even? (rand-int 2)))})
+
+(nodely.api.v0/checked-env env) ;; will throw!
+```
+
+Keep in mind these limitations and double-check the results if your graph contains such scenarios.
 
 ## Definitions
 
