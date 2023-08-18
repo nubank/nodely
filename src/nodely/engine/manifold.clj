@@ -1,9 +1,10 @@
 (ns nodely.engine.manifold
   (:refer-clojure :exclude [eval])
-  (:require [loom.alg :as alg]
-            [manifold.deferred :as deferred]
-            [nodely.data :as data]
-            [nodely.engine.core :as core]))
+  (:require
+   [loom.alg :as alg]
+   [manifold.deferred :as deferred]
+   [nodely.data :as data]
+   [nodely.engine.core :as core]))
 
 (defn- prepare-inputs
   [input-keys future-env]

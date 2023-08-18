@@ -1,9 +1,10 @@
 (ns nodely.engine.core-async.iterative-scheduling
   (:refer-clojure :exclude [eval])
-  (:require [clojure.core.async :as async]
-            [clojure.set :as set]
-            [nodely.data :as data]
-            [nodely.engine.core :as core]))
+  (:require
+   [clojure.core.async :as async]
+   [clojure.set :as set]
+   [nodely.data :as data]
+   [nodely.engine.core :as core]))
 
 (defn eval-leaf
   [node resolved-env]

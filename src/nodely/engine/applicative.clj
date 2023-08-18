@@ -1,12 +1,13 @@
 (ns nodely.engine.applicative
   (:refer-clojure :exclude [eval])
-  (:require [cats.context :as context]
-            [cats.core :as m]
-            [clojure.pprint :as pp]
-            [nodely.data :as data]
-            [nodely.engine.applicative.promesa :as promesa]
-            [nodely.engine.core :as core]
-            [nodely.engine.lazy-env :as lazy-env]))
+  (:require
+   [cats.context :as context]
+   [cats.core :as m]
+   [clojure.pprint :as pp]
+   [nodely.data :as data]
+   [nodely.engine.applicative.promesa :as promesa]
+   [nodely.engine.core :as core]
+   [nodely.engine.lazy-env :as lazy-env]))
 
 (prefer-method pp/simple-dispatch clojure.lang.IPersistentMap clojure.lang.IDeref)
 

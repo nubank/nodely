@@ -1,10 +1,11 @@
 (ns nodely.syntax-test
   (:refer-clojure :exclude [cond])
-  (:require [clojure.test :refer :all]
-            [matcher-combinators.test :refer [match?]]
-            [nodely.data :as data]
-            [nodely.engine.core :as core]
-            [nodely.syntax :as syntax :refer [>cond >if >leaf >sequence >value]]))
+  (:require
+   [clojure.test :refer :all]
+   [matcher-combinators.test :refer [match?]]
+   [nodely.data :as data]
+   [nodely.engine.core :as core]
+   [nodely.syntax :as syntax :refer [>cond >if >leaf >sequence >value]]))
 
 (def data-node (data/value 42))
 

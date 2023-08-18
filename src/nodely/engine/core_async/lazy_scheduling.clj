@@ -1,11 +1,13 @@
 (ns nodely.engine.core-async.lazy-scheduling
   (:refer-clojure :exclude [eval])
-  (:require [clojure.core.async :as async]
-            [nodely.data :as data]
-            [nodely.engine.core :as core]
-            [nodely.engine.core-async.core :as nodely.async]
-            [nodely.engine.lazy-env :as lazy-env])
-  (:import nodely.engine.lazy_env.LazySchedulingEnvironment))
+  (:require
+   [clojure.core.async :as async]
+   [nodely.data :as data]
+   [nodely.engine.core :as core]
+   [nodely.engine.core-async.core :as nodely.async]
+   [nodely.engine.lazy-env :as lazy-env])
+  (:import
+   nodely.engine.lazy_env.LazySchedulingEnvironment))
 
 (declare eval-async)
 
@@ -83,10 +85,10 @@
   (lazy-env/lazy-env env
                      eval-node-promise
                      (assoc opts
-                       ::lazy-env/exception-fn
-                       (fn [lazy-env k ex]
-                         (async/put! (::exception-ch opts)
-                                     ex)))))
+                            ::lazy-env/exception-fn
+                            (fn [lazy-env k ex]
+                              (async/put! (::exception-ch opts)
+                                          ex)))))
 
 (defn materialize
   [^LazySchedulingEnvironment pull-env {::keys [exception-ch]}]

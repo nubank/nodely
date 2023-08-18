@@ -1,7 +1,8 @@
 (ns nodely.engine.core-async.core
-  (:require [clojure.core.async :as async]
-            [nodely.data :as data]
-            [nodely.syntax :as syntax]))
+  (:require
+   [clojure.core.async :as async]
+   [nodely.data :as data]
+   [nodely.syntax :as syntax]))
 
 (defmacro meander
   "Wraps user expressions and pipes any exception through ex-ch"

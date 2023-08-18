@@ -1,7 +1,8 @@
 (ns nodely.engine.lazy
   (:refer-clojure :exclude [eval resolve])
-  (:require [nodely.data :as data]
-            [nodely.engine.core :as core]))
+  (:require
+   [nodely.data :as data]
+   [nodely.engine.core :as core]))
 
 (defn eval
   [env k]
