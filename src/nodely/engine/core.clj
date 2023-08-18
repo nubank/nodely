@@ -14,12 +14,6 @@
   (set/union (data/node-inputs node)
              (set (::data/inputs (meta node)))))
 
-(defn- nested-inputs-v2
-  "Internal use only"
-  [node]
-  (set/union (data/node-inputs-v2 node)
-             (set (::data/inputs (meta node)))))
-
 ;; FIXME: Add a way for this fn to accept a function that returns the inputs of a node
 (defn env->graph
   [env]
@@ -27,14 +21,6 @@
     (graph/->BasicEditableDigraph {} {} {})
     (let [input-mapping (reduce-kv (fn [acc k v]
                                      (assoc acc k (nested-inputs v))) {} env)]
-      (graph/transpose (graph/digraph input-mapping)))))
-
-(defn env->graph-v2
-  [env]
-  (if (empty? env)
-    (graph/->BasicEditableDigraph {} {} {})
-    (let [input-mapping (reduce-kv (fn [acc k v]
-                                     (assoc acc k (nested-inputs-v2 v))) {} env)]
       (graph/transpose (graph/digraph input-mapping)))))
 
 (defn- edges-that-reach
@@ -311,24 +297,3 @@
              (every? (partial contains? commited-deps) (dependencies-for k env)))
       (conj commited-deps k)
       commited-deps)))
-
-;;
-;; Detecting Cicles
-;;
-
-(defn check-env
-  "Returns nil if there is no cycle. Returns a map with useful information if there is no cycle"
-  [env]
-  (if (nil? (alg/topsort (env->graph-v2 env)))
-    (try (doseq [k (keys env)]
-           (all-paths-for-node k env))
-         (catch clojure.lang.ExceptionInfo e
-           (ex-data e)))
-    nil))
-
-(defmacro checked-env
-  "Checks env at macro expansion time, raising an exception if checks fail."
-  [env]
-  (if (nil? (check-env (clojure.core/eval env)))
-    env
-    (throw (ex-info "Checked-env found cycles at compile time" {:env env}))))
