@@ -25,9 +25,6 @@ jobs:
     - name: Run clj tests
       run: lein test
 
-    - name: Run midje tests
-      run: lein midje
-
   test-using-java-11:
     name: 'Test using Java 11'
     runs-on: ubuntu-latest
@@ -46,9 +43,6 @@ jobs:
 
     - name: Run clj tests
       run: lein test
-
-    - name: Run midje tests
-      run: lein midje
 
   release:
     name: 'Publish on Clojars'

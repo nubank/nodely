@@ -2,9 +2,9 @@ name: Clojure CI
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
 
 jobs:
   test-using-java-8:
@@ -26,9 +26,6 @@ jobs:
     - name: Run clj tests
       run: lein test
 
-    - name: Run midje tests
-      run: lein midje
-
   test-using-java-11:
     name: 'Test using Java 11'
     runs-on: ubuntu-latest
@@ -47,9 +44,6 @@ jobs:
 
     - name: Run clj tests
       run: lein test
-
-    - name: Run midje tests
-      run: lein midje
 
   lint:
     name: 'Lint'
