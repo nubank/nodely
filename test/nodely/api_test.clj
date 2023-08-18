@@ -1,6 +1,7 @@
 (ns nodely.api-test
   (:refer-clojure :exclude [cond])
-  (:require [clojure.test :refer :all]))
+  (:require
+   [clojure.test :refer :all]))
 
 #_(deftest nested-cond-macros
     (testing "using internal variables"

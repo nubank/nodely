@@ -1,13 +1,14 @@
 (ns nodely.engine.applicative-test
-  (:require [clojure.test :refer :all]
-            [criterium.core :as criterium]
-            [matcher-combinators.matchers :as matchers]
-            [matcher-combinators.test :refer [match?]]
-            [nodely.data :as data]
-            [nodely.engine.applicative :as applicative]
-            [nodely.engine.core :as core]
-            [nodely.syntax :as syntax :refer [>leaf >value]]
-            [promesa.core :as p]))
+  (:require
+   [clojure.test :refer :all]
+   [criterium.core :as criterium]
+   [matcher-combinators.matchers :as matchers]
+   [matcher-combinators.test :refer [match?]]
+   [nodely.data :as data]
+   [nodely.engine.applicative :as applicative]
+   [nodely.engine.core :as core]
+   [nodely.syntax :as syntax :refer [>leaf >value]]
+   [promesa.core :as p]))
 
 (def test-env {:a (>value 2)
                :b (>value 1)

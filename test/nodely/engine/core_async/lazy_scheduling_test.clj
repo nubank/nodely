@@ -1,19 +1,20 @@
 (ns nodely.engine.core-async.lazy-scheduling-test
   (:refer-clojure :exclude [eval async])
-  (:require [clojure.core.async :as async]
-            [clojure.test :refer :all]
-            [clojure.test.check.clojure-test :refer [defspec]]
-            [clojure.test.check.properties :as prop]
-            [criterium.core :refer [time-body]]
-            [matcher-combinators.matchers :as matchers]
-            [matcher-combinators.test :refer [match? thrown-match?]]
-            [nodely.data :as data]
-            [nodely.engine.core :as core]
-            [nodely.engine.core-async.core :as nodely.async]
-            [nodely.engine.core-async.lazy-scheduling :as nasync]
-            [nodely.engine.lazy :as engine.lazy]
-            [nodely.fixtures :as fixtures]
-            [nodely.syntax :as syntax :refer [>cond >leaf >value]]))
+  (:require
+   [clojure.core.async :as async]
+   [clojure.test :refer :all]
+   [clojure.test.check.clojure-test :refer [defspec]]
+   [clojure.test.check.properties :as prop]
+   [criterium.core :refer [time-body]]
+   [matcher-combinators.matchers :as matchers]
+   [matcher-combinators.test :refer [match? thrown-match?]]
+   [nodely.data :as data]
+   [nodely.engine.core :as core]
+   [nodely.engine.core-async.core :as nodely.async]
+   [nodely.engine.core-async.lazy-scheduling :as nasync]
+   [nodely.engine.lazy :as engine.lazy]
+   [nodely.fixtures :as fixtures]
+   [nodely.syntax :as syntax :refer [>cond >leaf >value]]))
 
 (def test-env {:a (>leaf (+ 1 2))
                :b (>leaf (* ?a 2))
@@ -177,5 +178,5 @@
 
 (defspec does-not-blow-up-spec
   (prop/for-all [env (fixtures/env-gen {})]
-    (nasync/eval-key env (rand-nth (keys env)))
-    true))
+                (nasync/eval-key env (rand-nth (keys env)))
+                true))

@@ -1,6 +1,7 @@
 (ns nodely.data
   (:refer-clojure :exclude [map sequence])
-  (:require [schema.core :as s]))
+  (:require
+   [schema.core :as s]))
 
 ;;
 ;; Node Definitions

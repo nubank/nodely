@@ -1,9 +1,10 @@
 (ns nodely.engine.core
   (:refer-clojure :exclude [eval resolve])
-  (:require [clojure.set :as set]
-            [loom.alg :as alg]
-            [loom.graph :as graph]
-            [nodely.data :as data]))
+  (:require
+   [clojure.set :as set]
+   [loom.alg :as alg]
+   [loom.graph :as graph]
+   [nodely.data :as data]))
 ;;
 ;; Graph Utilities
 ;;
@@ -174,8 +175,8 @@
          satisfied (:satisfied subject)]
     (if (empty? analyzed)
       (assoc subject
-        :analyzed analyzed
-        :satisfied satisfied)
+             :analyzed analyzed
+             :satisfied satisfied)
       (let [satisfied-analyzed (set (filter #(let [deps (dependencies-for % env)]
                                                (= deps
                                                   (set/intersection satisfied deps))) analyzed))]
