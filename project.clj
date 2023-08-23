@@ -16,7 +16,10 @@
 
   :exclusions [log4j]
 
-  :deploy-repositories [["releases" :clojars]]
+  :repositories [["publish" {:url "https://clojars.org/nodely"
+                             :username :env/clojars_username
+                             :password :env/clojars_passwd
+                             :sign-releases false}]]
 
   :repl-options {:init-ns user}
 
