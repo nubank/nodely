@@ -16,7 +16,7 @@
 
   :exclusions [log4j]
 
-  :repositories [["publish" {:url "https://clojars.org/nodely"
+  :repositories [["publish" {:url "https://clojars.org/repo"
                              :username :env/clojars_username
                              :password :env/clojars_passwd
                              :sign-releases false}]]
