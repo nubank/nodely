@@ -1,5 +1,7 @@
 # Nodely
 
+[![Clojars Project](https://img.shields.io/clojars/v/dev.nu/nodely.svg)](https://clojars.org/dev.nu/nodely)
+
 Declarative data dependency graph with conditionals. See the [tutorial](samples/tutorial.clj) for guided code examples.
 
 ## Status
