@@ -10,7 +10,7 @@
                  [aysylu/loom "1.0.2"]
                  [org.clojure/core.async "1.5.648"]
                  [funcool/cats "2.4.2"]
-                 [funcool/promesa "10.0.544"]
+                 [funcool/promesa "10.0.594"]
                  [manifold "0.1.9-alpha5"]
                  [prismatic/schema "1.1.12"]]
 

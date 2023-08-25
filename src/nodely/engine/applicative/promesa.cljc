@@ -30,8 +30,9 @@
 
      mp/Extract
      (-extract [it]
-       (deref it)                       ;; Note: Would not work on cljs
-       )))
+       (try (deref it)                  
+            (catch java.util.concurrent.ExecutionException e
+              (throw (.getCause e)))))))
 
 (def ^:no-doc context
   (reify
