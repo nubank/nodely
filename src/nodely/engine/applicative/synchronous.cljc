@@ -1,5 +1,6 @@
 (ns nodely.engine.applicative.synchronous
-  (:require [cats.protocols :as mp]))
+  (:require
+   [cats.protocols :as mp]))
 
 (declare context)
 
@@ -44,7 +45,4 @@
   mbind powers this mlet
   mbind is invoked
   (mlet [x [1 2 3]]
-        (+ 1 x))
-
-
-  )
+        (+ 1 x)))

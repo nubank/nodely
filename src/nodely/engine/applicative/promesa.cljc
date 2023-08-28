@@ -30,7 +30,7 @@
 
      mp/Extract
      (-extract [it]
-       (try (deref it)                  
+       (try (deref it)
             (catch java.util.concurrent.ExecutionException e
               (throw (.getCause e)))))))
 

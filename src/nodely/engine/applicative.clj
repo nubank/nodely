@@ -7,8 +7,8 @@
    [clojure.pprint :as pp]
    [nodely.data :as data]
    [nodely.engine.applicative.promesa :as promesa]
-   [nodely.engine.core-async.core :as core-async.core]
    [nodely.engine.core :as core]
+   [nodely.engine.core-async.core :as core-async.core]
    [nodely.engine.lazy-env :as lazy-env]))
 
 (prefer-method pp/simple-dispatch clojure.lang.IPersistentMap clojure.lang.IDeref)

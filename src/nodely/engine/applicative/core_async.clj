@@ -1,8 +1,10 @@
 (ns nodely.engine.applicative.core-async
-  (:require [cats.protocols :as mp]
-            [clojure.core.async :as async]
-            [clojure.core.async.impl.channels :as impl])
-  (:import [clojure.core.async.impl.channels ManyToManyChannel]))
+  (:require
+   [cats.protocols :as mp]
+   [clojure.core.async :as async]
+   [clojure.core.async.impl.channels :as impl])
+  (:import
+   [clojure.core.async.impl.channels ManyToManyChannel]))
 
 (declare context)
 
@@ -29,8 +31,8 @@
 (defn promise-of
   [v]
   (let [ret (async/promise-chan)]
-        (async/put! ret v)
-        ret))
+    (async/put! ret v)
+    ret))
 
 (defmacro go-future
   "Executes `body` in a core-async worker, with additional interesting
@@ -58,8 +60,8 @@
 ;; WIP Let's try abstracting the pattern we've been repeatedly doing
 ;; BUT with error handling
 #_(defmacro go-promise
-  [& body]
-  (async/go (try ~@body)))
+    [& body]
+    (async/go (try ~@body)))
 
 (def ^:no-doc context
   (reify
@@ -83,7 +85,7 @@
       (promise-of v))
 
     ;; Returns only one v, doesn't behave promise-like
-    
+
     (-fapply [_ pf pv] ;; good??
       (go-future (let [f (<? pf)
                        v (<? pv)]

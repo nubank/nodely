@@ -1,7 +1,8 @@
 (ns nodely.engine.schema
-  (:require [cats.core :as m]
-            [nodely.data :as data]
-            [schema.core :as s]))
+  (:require
+   [cats.core :as m]
+   [nodely.data :as data]
+   [schema.core :as s]))
 
 (defn validate
   [node value]

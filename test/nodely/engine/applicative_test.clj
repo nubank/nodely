@@ -7,10 +7,10 @@
    [matcher-combinators.test :refer [match?]]
    [nodely.data :as data]
    [nodely.engine.applicative :as applicative]
-   [nodely.engine.core-async.core :as nodely.async]
    [nodely.engine.applicative.core-async :as core-async]
    [nodely.engine.applicative.synchronous :as synchronous]
    [nodely.engine.core :as core]
+   [nodely.engine.core-async.core :as nodely.async]
    [nodely.engine.schema :as schema]
    [nodely.syntax :as syntax :refer [>leaf >value]]
    [nodely.syntax.schema :refer [yielding-schema]]
@@ -63,8 +63,8 @@
                                    :c (>leaf ?b)})
 
 (def env+go-block {:a (>value 1)
-                       :b (>leaf (async/go (+ ?a 5))) ;;(nodely.async/>channel-leaf (async/go (+ ?a 5)))
-                       :c (>leaf (+ ?a ?b))})
+                   :b (>leaf (async/go (+ ?a 5))) ;;(nodely.async/>channel-leaf (async/go (+ ?a 5)))
+                   :c (>leaf (+ ?a ?b))})
 
 (def env+channel-leaf {:a (>value 1)
                        :b (nodely.async/>channel-leaf
