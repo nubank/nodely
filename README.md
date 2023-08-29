@@ -205,13 +205,13 @@ value for a targeted node.
 
 Engines supported in Nodely include:
 
-| Engine  | Keyword | Status  |
-| ------------- | ------------- |
-| Lazy Synchronous                | `:sync.lazy`                       | Mature | 
-| Core Async Lazy Scheduling      | `:core-async.lazy-scheduling`      | Mature | 
-| Core Async Iterative Scheduling | `:core-async.iterative-scheduling` | Experimental | 
-| Async Manifold                  | `:async.manifold`                  | Experimental | 
-| Async Applicative               | `:async.applicative`               | Experimental | 
+ | Engine                          | Keyword                            | Status       |
+ | ------------------------------- | ---------------------------------- | ------------ |
+ | Lazy Synchronous                | `:sync.lazy`                       | Mature       | 
+ | Core Async Lazy Scheduling      | `:core-async.lazy-scheduling`      | Mature       | 
+ | Core Async Iterative Scheduling | `:core-async.iterative-scheduling` | Experimental | 
+ | Async Manifold                  | `:async.manifold`                  | Experimental | 
+ | Async Applicative               | `:async.applicative`               | Experimental | 
 
 ### Lazy Synchronous
 
