@@ -7,7 +7,7 @@
    [nodely.data :as data]
    [nodely.engine.core :as core]
    [nodely.fixtures :as fixtures]
-   [nodely.syntax :as syntax :refer [>cond >leaf >if]]
+   [nodely.syntax :as syntax :refer [>cond >if >leaf]]
    [schema.test]))
 
 (use-fixtures :once schema.test/validate-schemas)

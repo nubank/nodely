@@ -57,26 +57,29 @@ to evaluate a dependency.
 
 ### Cycle Detection
 
-Nodely provides a handy function to detect cycles in _environments_.
-
-
-To detect cycles in your graph, run the following code:
+Nodely provides a handy function that throws an error when a cycle has been detected in your _environment_. To use this function, simply execute the following code:
 
 ```clj
-(nodely.api.v0/checked-env env) ;; do not leave this running in production!
+(comment
+  (require '[nodely.api.v0 :as nodely])
+  (nodely/checked-env
+   {:a (nodely/>value 1)
+    :b (nodely/>leaf (even? ?a))})
+) ;; Returns a map with useful information (no cycles)
 ```
 
-Please note that the `checked-env` function will throw when a cycle has been detected.
+>Avoid using the `checked-env` function at runtime, as its calculations can be costly. It is recommended to perform this verification only during development, using the REPL.
 
 It's important to be aware that this function may sometimes produce false positives when dealing with graphs that contain mutually exclusive conditions. Here's an example where the function might produce a false positive:
 
 ```clj
-(def mutually-exclusive-env-without-cycles
-  {:f (>if (>leaf ?c) :it-was-even! (>leaf ?e))
-   :e (>if (>leaf ?c) (>leaf ?f) :it-was-odd!)
-   :c (>leaf (even? (rand-int 2)))})
-
-(nodely.api.v0/checked-env env) ;; will throw!
+(comment
+  (require '[nodely.api.v0 :as nodely])
+  (nodely/checked-env 
+   {:f  (>if (>leaf ?c) :it-was-even! (>leaf ?e))
+     :e (>if (>leaf ?c) (>leaf ?f) :it-was-odd!)
+     :c (>leaf (even? (rand-int 2)))})
+) ;; trhows "Checked-env found cycles at compile time"
 ```
 
 Keep in mind these limitations and double-check the results if your graph contains such scenarios.

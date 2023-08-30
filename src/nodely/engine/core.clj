@@ -304,7 +304,7 @@
 ;;
 
 (defn check-env
-  "Returns nil if there is no cycle. Returns a map with useful information if there is cycle"
+  "Returns nil if there is no cycle. Returns a map with useful information if there is no cycle"
   ([k env]
    (try (all-paths-for-node k env)
         nil
