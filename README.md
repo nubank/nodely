@@ -65,7 +65,7 @@ Nodely provides a handy function that throws an error when a cycle has been dete
   (nodely/checked-env
    {:a (nodely/>value 1)
     :b (nodely/>leaf (even? ?a))})
-) ;; Returns a map with useful information (no cycles)
+) ;; When no cycle is detected, returns env {:a #:nodely.data{:type :value, :value 1}...}
 ```
 
 >Avoid using the `checked-env` function at runtime, as its calculations can be costly. It is recommended to perform this verification only during development, using the REPL.
@@ -75,11 +75,11 @@ It's important to be aware that this function may sometimes produce false positi
 ```clj
 (comment
   (require '[nodely.api.v0 :as nodely])
-  (nodely/checked-env 
+  (nodely/checked-env
    {:f  (>if (>leaf ?c) :it-was-even! (>leaf ?e))
      :e (>if (>leaf ?c) (>leaf ?f) :it-was-odd!)
      :c (>leaf (even? (rand-int 2)))})
-) ;; trhows "Checked-env found cycles at compile time"
+) ;; throws "Checked-env found cycles at compile time"
 ```
 
 Keep in mind these limitations and double-check the results if your graph contains such scenarios.
