@@ -46,7 +46,7 @@ Nodely _environments_ are similar to DAGs in the following ways:
   expression creates a single unambiguous direction for the edge.
 - The graph may not contain cycles: Nodely uses a dependency
   resolution process to evaluate nodes. If Nodely accepted and
-  attempted to evaluate a cycle, it would loop indefinitely.
+  attempted to evaluate a cycle, it would loop indefinitely (see [Cycle Detection](#cycle-detection)).
 - The combination of nodes and their dependencies instructs Nodely how
   to evaluate some target node.
 
@@ -56,6 +56,35 @@ uncertainty of the graph that may not be resolved until run time. By
 expressing branches; Nodely allows for conditional dependencies that
 defer evaluation until run time checks have determined it is necessary
 to evaluate a dependency.
+
+### Cycle Detection
+
+Nodely provides a handy function that throws an error when a cycle has been detected in your _environment_. To use this function, simply execute the following code:
+
+```clj
+(comment
+  (require '[nodely.api.v0 :as nodely])
+  (nodely/checked-env
+   {:a (nodely/>value 1)
+    :b (nodely/>leaf (even? ?a))})
+) ;; When no cycle is detected, returns env {:a #:nodely.data{:type :value, :value 1}...}
+```
+
+>Avoid using the `checked-env` function at runtime, as its calculations can be costly. It is recommended to perform this verification only during development, using the REPL.
+
+It's important to be aware that this function may sometimes produce false positives when dealing with graphs that contain mutually exclusive conditions. Here's an example where the function might produce a false positive:
+
+```clj
+(comment
+  (require '[nodely.api.v0 :as nodely])
+  (nodely/checked-env
+   {:f  (>if (>leaf ?c) :it-was-even! (>leaf ?e))
+     :e (>if (>leaf ?c) (>leaf ?f) :it-was-odd!)
+     :c (>leaf (even? (rand-int 2)))})
+) ;; throws "Checked-env found cycles at compile time"
+```
+
+Keep in mind these limitations and double-check the results if your graph contains such scenarios.
 
 ## Definitions
 

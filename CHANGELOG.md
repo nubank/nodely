@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- Add checked-env function for cycle detection in env
+
 ## 1.12.0 / 2023-02-08
 - Add an applicative/monad engine using funcool/promesa in the backend, but theoretically extendable to anything implementing applicative and monad protocols. This is experimental and comes with no guarantees. Some minor tweaks might be needed to support cljs.
 

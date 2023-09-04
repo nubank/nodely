@@ -298,3 +298,26 @@
              (every? (partial contains? commited-deps) (dependencies-for k env)))
       (conj commited-deps k)
       commited-deps)))
+
+;;
+;; Detecting Cycles
+;;
+
+(defn check-env
+  "Returns nil if there is no cycle. Returns a map with useful information if there is cycle"
+  ([k env]
+   (try (all-paths-for-node k env)
+        nil
+        (catch clojure.lang.ExceptionInfo e
+          (ex-data e))))
+  ([env]
+   (some identity
+         (for [k (keys env)]
+           (check-env k env)))))
+
+(defn checked-env
+  "Checks env, raising an exception if checks fail."
+  [env]
+  (if (check-env env)
+    (throw (ex-info "Checked-env found cycles at compile time" {:env env}))
+    env))
