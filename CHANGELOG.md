@@ -1,7 +1,12 @@
 # Changelog
 
-## Unreleased
+## 1.13.0 / 2023-09-12
 - Add checked-env function for cycle detection in env
+- Added applicative synchronous engine (:async.applicative)
+- Applicative engine support for core-async
+- Applicative engine support for sync execution
+- Add schema validation syntax
+- Add support for schema validation on applicative engine
 
 ## 1.12.0 / 2023-02-08
 - Add an applicative/monad engine using funcool/promesa in the backend, but theoretically extendable to anything implementing applicative and monad protocols. This is experimental and comes with no guarantees. Some minor tweaks might be needed to support cljs.
