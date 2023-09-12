@@ -1,14 +1,21 @@
 (ns nodely.engine.applicative-test
   (:require
+   [clojure.core.async :as async]
    [clojure.test :refer :all]
    [criterium.core :as criterium]
    [matcher-combinators.matchers :as matchers]
    [matcher-combinators.test :refer [match?]]
    [nodely.data :as data]
    [nodely.engine.applicative :as applicative]
+   [nodely.engine.applicative.core-async :as core-async]
+   [nodely.engine.applicative.synchronous :as synchronous]
    [nodely.engine.core :as core]
+   [nodely.engine.core-async.core :as nodely.async]
+   [nodely.engine.schema :as schema]
    [nodely.syntax :as syntax :refer [>leaf >value]]
-   [promesa.core :as p]))
+   [nodely.syntax.schema :refer [yielding-schema]]
+   [promesa.core :as p]
+   [schema.core :as s]))
 
 (def test-env {:a (>value 2)
                :b (>value 1)
@@ -55,6 +62,15 @@
                                    :b (syntax/>sequence #(do (Thread/sleep 1000) (inc %)) ?a)
                                    :c (>leaf ?b)})
 
+(def env+go-block {:a (>value 1)
+                   :b (>leaf (async/go (+ ?a 5))) ;;(nodely.async/>channel-leaf (async/go (+ ?a 5)))
+                   :c (>leaf (+ ?a ?b))})
+
+(def env+channel-leaf {:a (>value 1)
+                       :b (nodely.async/>channel-leaf
+                           (async/go (+ ?a 5)))
+                       :c (>leaf (+ ?a ?b))})
+
 (deftest eval-key-test
   (testing "eval promise"
     (is (match? 3 (applicative/eval-key test-env :c))))
@@ -100,3 +116,70 @@
                   (- nanosec-sync nanosec-async)))))
   (testing "Actually computes the correct answers"
     (is (match? [2 3 4] (applicative/eval-key env-with-sequence+delay :c)))))
+
+(deftest schema-test
+  (let [env-with-schema         {:a (>value 2)
+                                 :b (>value 1)
+                                 :c (yielding-schema (>leaf (+ ?a ?b)) s/Int)}
+        env-with-failing-schema {:a (>value 2)
+                                 :b (>value 1)
+                                 :c (yielding-schema (>leaf (+ ?a ?b)) s/Bool)}]
+    (testing "it should not fail"
+      (is (match? 3 (applicative/eval-key env-with-schema :c {::applicative/fvalidate schema/fvalidate}))))
+    (testing "returns ex-info when schema is selected as fvalidate, and schema fn validation is enabled"
+      (is (thrown-match? clojure.lang.ExceptionInfo
+                         {:type   :schema.core/error
+                          :schema java.lang.Boolean
+                          :value  3}
+                         (ex-data
+                          (s/with-fn-validation
+                            (applicative/eval-key env-with-failing-schema :c {::applicative/fvalidate schema/fvalidate}))))))
+    (testing "doesn't validate when validation is disabled"
+      (is (match? 3 (applicative/eval-key env-with-failing-schema :c {::applicative/fvalidate schema/fvalidate}))))))
+
+(deftest synchronous-applicative-test
+  (let [simple-env {:a (>value 2)
+                    :b (>value 1)
+                    :c (>leaf (+ ?a ?b))}
+        env-with-failing-schema {:a (>value 2)
+                                 :b (>value 1)
+                                 :c (yielding-schema (>leaf (+ ?a ?b)) s/Bool)}]
+    (testing "it should not fail"
+      (is (match? 3 (applicative/eval-key simple-env :c {::applicative/context synchronous/context}))))
+    (testing "more complicated example"
+      (is (match? 4 (applicative/eval-key tricky-example :z {::applicative/context synchronous/context}))))
+    (testing "returns ex-info when schema is selected as fvalidate, and schema fn validation is enabled"
+      (is (thrown-match? clojure.lang.ExceptionInfo
+                         {:type   :schema.core/error
+                          :schema java.lang.Boolean
+                          :value  3}
+                         (ex-data
+                          (s/with-fn-validation
+                            (applicative/eval-key env-with-failing-schema :c {::applicative/fvalidate schema/fvalidate
+                                                                              ::applicative/context synchronous/context}))))))))
+
+(deftest core-async-applicative-test
+  (let [simple-env {:a (>value 2)
+                    :b (>value 1)
+                    :c (>leaf (+ ?a ?b))}
+        env-with-failing-schema {:a (>value 2)
+                                 :b (>value 1)
+                                 :c (yielding-schema (>leaf (+ ?a ?b)) s/Bool)}]
+    (testing "it should not fail"
+      (is (match? 3 (applicative/eval-key simple-env :c {::applicative/context core-async/context}))))
+    (testing "more complicated example"
+      (is (match? 4 (applicative/eval-key tricky-example :z {::applicative/context core-async/context}))))
+    (testing "returns ex-info when schema is selected as fvalidate, and schema fn validation is enabled"
+      (is (thrown-match? clojure.lang.ExceptionInfo
+                         {:type   :schema.core/error
+                          :schema java.lang.Boolean
+                          :value  3}
+                         (ex-data
+                          (s/with-fn-validation
+                            (applicative/eval-key env-with-failing-schema :c {::applicative/fvalidate schema/fvalidate
+                                                                              ::applicative/context core-async/context}))))))
+    (testing "async response is equal to sync response with async user channels"
+      (is (= 7 (applicative/eval-key env+go-block :c {::applicative/context core-async/context}))))
+    (testing "channel-leaf"
+      (is (= 7 (applicative/eval-key env+channel-leaf :c {::applicative/context core-async/context}))))))
+

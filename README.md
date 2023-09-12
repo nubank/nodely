@@ -236,7 +236,15 @@ value for a targeted node.
 
 Engines supported in Nodely include:
 
-### :sync.lazy
+ | Engine                          | Keyword                            | Status       |
+ | ------------------------------- | ---------------------------------- | ------------ |
+ | Lazy Synchronous                | `:sync.lazy`                       | Mature       | 
+ | Core Async Lazy Scheduling      | `:core-async.lazy-scheduling`      | Mature       | 
+ | Core Async Iterative Scheduling | `:core-async.iterative-scheduling` | Experimental | 
+ | Async Manifold                  | `:async.manifold`                  | Experimental | 
+ | Async Applicative               | `:async.applicative`               | Experimental | 
+
+### Lazy Synchronous
 
 The Nodely `:sync.lazy` engine executes in **one thread** of
 execution, visiting nodes in depth-first traversal from the targeted
@@ -248,22 +256,7 @@ This engine should be the least complicated to reason about, and
 useful for debugging. It will schedule nodes to evaluate strictly head
 and tail, and may introduce accidental latencies consequently.
 
-### :async.manifold
-
-The Nodely `:async.manifold` engine executes in the context of
-[Manifold Deferred
-Futures](https://github.com/clj-commons/manifold/blob/master/src/manifold/deferred.clj#L660). First,
-all branches in the environment are synchronously resolved to
-determine one DAG. Then, all nodes are immediately scheduled to eval
-in parallel, with dependencies managed by inter-thread blocking.
-
-This engine may afford the greatest concurrency of evaluating nodes
-and will likely produce a result in the smallest amount of wall clock
-time. However, it is likely to create many blocking Threads in the
-process, and so may have poor consequences when, e.g. serving many
-hundreds or thousands of requests per minute.
-
-### :core-async.lazy-scheduling
+### Core Async Lazy Scheduling
 
 The Nodely `:core-async/lazy-scheduling` engine executes in Clojure's
 `core.async` library. Core async jobs are spawned to evaluate
@@ -283,6 +276,50 @@ When functions are specified in nodes with the
 `:core-async/lazy-scheduling` engine, the functions must not block, or
 they will block in the `core.async` Dispatch Thread Pool and present a
 major performance penalty.
+
+### Core Async Iterative Scheduling
+
+Iterative scheduling differs from lazy scheduling by trying to predict what branches
+will have to be resolved ahead of time. This strategy was found to be inefficient on environments with a large number of branches,
+since the complexity of analyzing the environment grows exponentially with the number of branches.
+
+### Async Manifold
+
+The Nodely `:async.manifold` engine executes in the context of
+[Manifold Deferred
+Futures](https://github.com/clj-commons/manifold/blob/master/src/manifold/deferred.clj#L660). First,
+all branches in the environment are synchronously resolved to
+determine one DAG. Then, all nodes are immediately scheduled to eval
+in parallel, with dependencies managed by inter-thread blocking.
+
+This engine may afford the greatest concurrency of evaluating nodes
+and will likely produce a result in the smallest amount of wall clock
+time. However, it is likely to create many blocking Threads in the
+process, and so may have poor consequences when, e.g. serving many
+hundreds or thousands of requests per minute.
+
+### Async Applicative
+
+This engine is implemented based on the category theory concept of Applicative Functors.
+Applicative Functors have been considered as good abstractions for asynchronous processes because parts of its structure do not imply a strict execution order.
+Because of that we were able to implement support to several engines with a single code base, just changing the required set of protocols.
+Currently Async Applicative supports the following sub-engines:
+
+* Synchronous
+* Core Async
+* Promesa
+
+Setting a sub-engine (evaluation context) is done with the `:nodely.engine.applicative/context` option, which defaults to promesa.
+
+```clojure
+(ns ...
+  (:require [nodely.engine.applicative.core-async :as applicative.core-async])
+(nodely/eval-key my-env :z  {::nodely/engine :sync.lazy
+                             :nodely.engine.applicative/context applicative.core-async/context})
+```
+
+Everything related to the applicative engine is currently experimental and subject to change.
+
 
 ## Risks
 
