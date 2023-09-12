@@ -7,7 +7,7 @@
    [nodely.data :as data]
    [nodely.engine.core :as core]
    [nodely.fixtures :as fixtures]
-   [nodely.syntax :as syntax :refer [>cond >leaf]]
+   [nodely.syntax :as syntax :refer [>cond >if >leaf]]
    [schema.test]))
 
 (use-fixtures :once schema.test/validate-schemas)
@@ -232,3 +232,17 @@
                 (every? #(= (set (core/committed-dependencies % env))
                             (core/dependencies-for % env))
                         (keys env))))
+
+(def mutually-exclusive-env-without-cycles
+  {:d (>if (>leaf ?c) (>leaf ?e) (>leaf ?f))
+   :f (>if (>leaf ?c) :it-was-even! (>leaf ?e))
+   :e (>if (>leaf ?c) (>leaf ?f) :it-was-odd!)
+   :c (>leaf (even? (rand-int 2)))})
+
+(deftest checked-env
+  (testing "there is no cycle"
+    (is (= interesting-example (core/checked-env interesting-example))))
+  (testing "there is a cycle in the env and checked-env detects it"
+    (is (thrown? clojure.lang.ExceptionInfo (core/checked-env env-with-cycle))))
+  (testing "there is no cycle but checked-env reports there is (corner case mutually exclusive)"
+    (is (thrown? clojure.lang.ExceptionInfo (core/checked-env mutually-exclusive-env-without-cycles)))))
