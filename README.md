@@ -6,7 +6,10 @@ Declarative data dependency graph with conditionals. See the [tutorial](samples/
 
 ## Status
 
-Nodely is still in beta. We don't expect it to change it by a lot, but expect some rough edges.
+There is a [list of engines](#evaluation) together with their state of maturity.
+The mature engines have been used in production in critical services and this is usually the main criteria for flagging an engine as mature.
+Recommended usage is through the api provided via namespace `nodely.api.v0`. We aim to avoid breaking the api, and if it becomes necessary we will
+create a new api in a new namespace (such as `nodely.api.v1`) instead.
 
 ## Introduction
 
