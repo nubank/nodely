@@ -2,36 +2,37 @@
   (:require
    [cats.protocols :as mp]
    [clojure.core.async :as async]
+   [nodely.data :as data]
    [clojure.core.async.impl.channels :as impl])
   (:import
    [clojure.core.async.impl.channels ManyToManyChannel]))
 
 (declare context)
 
-(defn throw-err
+(defn handle-value
   [v]
   (if (instance? Throwable v)
     (throw v)
-    v))
+    (::data/value v)))
 
 (defmacro <?
   "Just like a <! macro, but if the value taken from the channel is a Throwable instance, it will throw it.
   <! takes a val from port. Must be called inside a (go ...) or (go-try ...) block.
   Will return nil if closed. Will park if nothing is available."
   [ch]
-  `(throw-err (async/<! ~ch)))
+  `(handle-value (async/<! ~ch)))
 
 (extend-type ManyToManyChannel
   mp/Contextual
   (-get-context [_] context)
 
   mp/Extract
-  (-extract [it] (throw-err (async/<!! it))))
+  (-extract [it] (handle-value #nu/tapd (async/<!! it))))
 
 (defn promise-of
   [v]
   (let [ret (async/promise-chan)]
-    (async/put! ret v)
+    (async/put! ret (data/value v))
     ret))
 
 (defmacro go-future
@@ -51,7 +52,7 @@
   exception will be immediately thrown."
   [& body]
   `(let [ret# (async/promise-chan)]
-     (async/go (let [retv# (try (do ~@body)
+     (async/go (let [retv# (try (data/value ~@body)
                                 (catch Throwable t#
                                   t#))]
                  (async/>! ret# retv#)))
@@ -71,7 +72,7 @@
       (go-future (let [v (<? mv)]
                    (f v))))
 
-    mp/Monad ;; goood
+    mp/Monad
     (-mreturn [_ v]
       (promise-of v))
 

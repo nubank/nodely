@@ -6,10 +6,10 @@
 
 (defn validate
   [node value]
-  (if-let [schema (and (s/fn-validation?)
-                       (:yielded-schema (meta node)))]
-    (data/value (s/validate schema (::data/value value)))
-    value))
+  (when-let [schema #nu/tapd (and (s/fn-validation?)
+                         (:yielded-schema (meta node)))]
+    #nu/tapd (s/validate schema #nu/tapd (::data/value value)))
+  value)
 
 (defn fvalidate
   [return node]

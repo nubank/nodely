@@ -2,10 +2,13 @@
   (:require
    [clojure.core.async :as async]
    [clojure.test :refer :all]
+   [clojure.test.check.clojure-test :refer [defspec]]
+   [clojure.test.check.properties :as prop]
    [criterium.core :as criterium]
    [matcher-combinators.matchers :as matchers]
    [matcher-combinators.test :refer [match?]]
    [nodely.data :as data]
+   [nodely.fixtures :as fixtures]
    [nodely.engine.applicative :as applicative]
    [nodely.engine.applicative.core-async :as core-async]
    [nodely.engine.applicative.synchronous :as synchronous]
@@ -27,6 +30,15 @@
                      :d (>leaf {:a ?a
                                 :b ?b
                                 :c ?c})})
+
+(def test-env+delay-core-async {:a (>leaf (+ 1 2))
+                                :b (>leaf (do (Thread/sleep 1000)
+                                              (* ?a 2)))
+                                :c (>leaf (do (Thread/sleep 1000)
+                                              (* ?a 3)))
+                                :d (>leaf {:a ?a
+                                           :b ?b
+                                           :c ?c})})
 
 (def tricky-example {:x (data/value 1)
                      :y (data/value 2)
@@ -80,6 +92,19 @@
       (is (match? (matchers/within-delta 100000000 1000000000) time-ns))))
   (testing "tricky example"
     (is (match? 4 (applicative/eval-key tricky-example :z)))))
+
+(deftest eval-key-test-core-async
+  (testing "eval promise"
+    (is (match? 3 (applicative/eval-key test-env :c {::applicative/context core-async/context}))))
+  (testing "async works"
+    (let [[time-ns result] (criterium/time-body (applicative/eval-key test-env+delay-core-async
+                                                                      :d
+                                                                      {::applicative/context core-async/context}))]
+      (is (match? {:a 3 :b 6 :c 9} result))
+      (is (match? (matchers/within-delta 100000000 1000000000) time-ns))))
+  (testing "tricky example"
+    (is (match? 4 (applicative/eval-key tricky-example :z
+                                        {::applicative/context core-async/context})))))
 
 (deftest eval-test
   (testing "eval promise"
@@ -176,10 +201,17 @@
                           :value  3}
                          (ex-data
                           (s/with-fn-validation
-                            (applicative/eval-key env-with-failing-schema :c {::applicative/fvalidate schema/fvalidate
-                                                                              ::applicative/context core-async/context}))))))
+                            #nu/tapd (applicative/eval-key env-with-failing-schema :c
+                                                  {::applicative/fvalidate schema/fvalidate
+                                                   ::applicative/context core-async/context}))))))
     (testing "async response is equal to sync response with async user channels"
       (is (= 7 (applicative/eval-key env+go-block :c {::applicative/context core-async/context}))))
     (testing "channel-leaf"
       (is (= 7 (applicative/eval-key env+channel-leaf :c {::applicative/context core-async/context}))))))
 
+(defspec does-not-blow-up-spec
+  (prop/for-all [env (fixtures/env-gen {})]
+                (applicative/eval-key env
+                                      (rand-nth (keys env))
+                                      {::applicative/context core-async/context})
+                true))
