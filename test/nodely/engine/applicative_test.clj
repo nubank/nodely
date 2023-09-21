@@ -201,7 +201,7 @@
                           :value  3}
                          (ex-data
                           (s/with-fn-validation
-                            #nu/tapd (applicative/eval-key env-with-failing-schema :c
+                            (applicative/eval-key env-with-failing-schema :c
                                                   {::applicative/fvalidate schema/fvalidate
                                                    ::applicative/context core-async/context}))))))
     (testing "async response is equal to sync response with async user channels"
