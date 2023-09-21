@@ -126,7 +126,8 @@
 (defn- sequence->value
   [node env]
   (let [in-key  (::data/input node)
-        f       (::data/fn node)
+        f       (or (::data/fn node)
+                    ((::data/fn-fn node) (prepare-inputs (::data/closure-inputs node) env)))
         new-env (resolve-inputs [in-key] env)
         in      (data/get-value new-env in-key)]
     [(data/value (mapv f in)) new-env]))
