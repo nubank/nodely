@@ -2,37 +2,55 @@
   (:require
    [cats.protocols :as mp]
    [clojure.core.async :as async]
-   [nodely.data :as data]
-   [clojure.core.async.impl.channels :as impl])
+   [clojure.core.async.impl.channels :as impl]
+   [nodely.data :as data])
   (:import
    [clojure.core.async.impl.channels ManyToManyChannel]))
 
 (declare context)
 
-(defn handle-value
+(defrecord Box [value]
+  mp/Contextual
+  (-get-context [_] context)
+
+  mp/Extract
+  (-extract [it] value))
+
+(defn box
+  [it]
+  (->Box it))
+
+(defn unbox
+  [it]
+  (:value it))
+
+(defn handle-read-value
   [v]
-  (if (instance? Throwable v)
-    (throw v)
-    (::data/value v)))
+  (cond
+    (instance? Box v) (unbox v)
+    (instance? Throwable v) (throw v)
+    (data/value? v) v ;; read from channel-leaf
+    :else v           ;; read from user supplied channel
+    ))
 
 (defmacro <?
   "Just like a <! macro, but if the value taken from the channel is a Throwable instance, it will throw it.
   <! takes a val from port. Must be called inside a (go ...) or (go-try ...) block.
   Will return nil if closed. Will park if nothing is available."
   [ch]
-  `(handle-value (async/<! ~ch)))
+  `(handle-read-value (async/<! ~ch)))
 
 (extend-type ManyToManyChannel
   mp/Contextual
   (-get-context [_] context)
 
   mp/Extract
-  (-extract [it] (handle-value #nu/tapd (async/<!! it))))
+  (-extract [it] (handle-read-value (async/<!! it))))
 
 (defn promise-of
   [v]
   (let [ret (async/promise-chan)]
-    (async/put! ret (data/value v))
+    (async/put! ret (box v))
     ret))
 
 (defmacro go-future
@@ -52,7 +70,7 @@
   exception will be immediately thrown."
   [& body]
   `(let [ret# (async/promise-chan)]
-     (async/go (let [retv# (try (data/value ~@body)
+     (async/go (let [retv# (try (box ~@body)
                                 (catch Throwable t#
                                   t#))]
                  (async/>! ret# retv#)))

@@ -49,12 +49,17 @@
   (let [in     (core/prepare-inputs deps-keys (zipmap deps-keys deps))
         result (if (instance? nodely.engine.core_async.core.AsyncThunk f)
                  (let [exception-ch (async/promise-chan)
-                       result-ch    (m/fmap ::data/value (core-async.core/evaluation-channel f in {:exception-ch exception-ch}))]
+                       result-ch    (core-async.core/evaluation-channel f in {:exception-ch exception-ch})]
                    (async/merge [exception-ch result-ch]))
                  (f in))]
-    (if (in-context? result context)
-      (m/fmap data/value result)
-      (m/pure context (data/value result)))))
+    (if (instance? nodely.engine.core_async.core.AsyncThunk f)
+      (let [exception-ch (async/promise-chan)
+            result-ch    (core-async.core/evaluation-channel f in {:exception-ch exception-ch})]
+        (async/merge [exception-ch result-ch]))
+      (let [result (f in)]
+        (if (in-context? result context)
+          (m/fmap data/value result)
+          (m/pure context (data/value result)))))))
 
 (defn noop-validate
   [return _]
