@@ -9,29 +9,24 @@
 
 (declare context)
 
-(defrecord Box [value]
-  mp/Contextual
-  (-get-context [_] context)
-
-  mp/Extract
-  (-extract [it] value))
-
-(defn box
+(defn nil-guard
   [it]
-  (->Box it))
+  (if (nil? it)
+    ::nil
+    it))
 
-(defn unbox
+(defn nil-unguard
   [it]
-  (:value it))
+  (if (= it ::nil)
+    nil
+    it))
 
 (defn handle-read-value
   [v]
   (cond
-    (instance? Box v) (unbox v)
     (instance? Throwable v) (throw v)
-    (data/value? v) v ;; read from channel-leaf
-    :else v           ;; read from user supplied channel
-    ))
+    (data/value? v) v      ;; read from channel-leaf
+    :else (nil-unguard v)))
 
 (defmacro <?
   "Just like a <! macro, but if the value taken from the channel is a Throwable instance, it will throw it.
@@ -50,7 +45,7 @@
 (defn promise-of
   [v]
   (let [ret (async/promise-chan)]
-    (async/put! ret (box v))
+    (async/put! ret (nil-guard v))
     ret))
 
 (defmacro go-future
@@ -70,7 +65,7 @@
   exception will be immediately thrown."
   [& body]
   `(let [ret# (async/promise-chan)]
-     (async/go (let [retv# (try (box ~@body)
+     (async/go (let [retv# (try (nil-guard ~@body)
                                 (catch Throwable t#
                                   t#))]
                  (async/>! ret# retv#)))
