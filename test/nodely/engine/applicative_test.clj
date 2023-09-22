@@ -33,9 +33,9 @@
 
 (def test-env+delay-core-async {:a (>leaf (+ 1 2))
                                 :b (>leaf (do (Thread/sleep 1000)
-                                              (* ?a 2)))
+                                            (* ?a 2)))
                                 :c (>leaf (do (Thread/sleep 1000)
-                                              (* ?a 3)))
+                                            (* ?a 3)))
                                 :d (>leaf {:a ?a
                                            :b ?b
                                            :c ?c})})

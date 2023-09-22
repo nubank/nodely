@@ -46,12 +46,7 @@
 
 (defn- apply-f
   [context f deps-keys deps]
-  (let [in     (core/prepare-inputs deps-keys (zipmap deps-keys deps))
-        result (if (instance? nodely.engine.core_async.core.AsyncThunk f)
-                 (let [exception-ch (async/promise-chan)
-                       result-ch    (core-async.core/evaluation-channel f in {:exception-ch exception-ch})]
-                   (async/merge [exception-ch result-ch]))
-                 (f in))]
+  (let [in     (core/prepare-inputs deps-keys (zipmap deps-keys deps))]
     (if (instance? nodely.engine.core_async.core.AsyncThunk f)
       (let [exception-ch (async/promise-chan)
             result-ch    (core-async.core/evaluation-channel f in {:exception-ch exception-ch})]
