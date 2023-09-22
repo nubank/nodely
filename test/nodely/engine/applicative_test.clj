@@ -8,13 +8,13 @@
    [matcher-combinators.matchers :as matchers]
    [matcher-combinators.test :refer [match?]]
    [nodely.data :as data]
-   [nodely.fixtures :as fixtures]
    [nodely.engine.applicative :as applicative]
    [nodely.engine.applicative.core-async :as core-async]
    [nodely.engine.applicative.synchronous :as synchronous]
    [nodely.engine.core :as core]
    [nodely.engine.core-async.core :as nodely.async]
    [nodely.engine.schema :as schema]
+   [nodely.fixtures :as fixtures]
    [nodely.syntax :as syntax :refer [>leaf >value]]
    [nodely.syntax.schema :refer [yielding-schema]]
    [promesa.core :as p]
@@ -33,9 +33,9 @@
 
 (def test-env+delay-core-async {:a (>leaf (+ 1 2))
                                 :b (>leaf (do (Thread/sleep 1000)
-                                            (* ?a 2)))
+                                              (* ?a 2)))
                                 :c (>leaf (do (Thread/sleep 1000)
-                                            (* ?a 3)))
+                                              (* ?a 3)))
                                 :d (>leaf {:a ?a
                                            :b ?b
                                            :c ?c})})
