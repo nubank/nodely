@@ -23,10 +23,9 @@
 
 (defn handle-read-value
   [v]
-  (cond
-    (instance? Throwable v) (throw v)
-    (data/value? v) v      ;; read from channel-leaf
-    :else (nil-unguard v)))
+  (if (instance? Throwable v)
+    (throw v)
+    (nil-unguard v)))
 
 (defmacro <?
   "Just like a <! macro, but if the value taken from the channel is a Throwable instance, it will throw it.
