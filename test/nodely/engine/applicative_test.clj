@@ -19,7 +19,8 @@
    [nodely.syntax.schema :refer [yielding-schema]]
    [promesa.core :as p]
    [schema.core :as s]
-   [clojure.test.check.generators :as gen]))
+   [clojure.test.check.generators :as gen]
+   [loom.alg :as alg]))
 
 (def test-env {:a (>value 2)
                :b (>value 1)
@@ -221,6 +222,6 @@
   (let [sample-env (gen/generate (fixtures/env-gen {:node-generator fixtures/scalar-gen
                                                     :min-stages     10
                                                     :max-stages     10}))
-        a-key      (first (keys sample-env))]
+        a-key      (last (alg/topsort (core/env->graph sample-env)))]
     #_(testing ""
       (is (= 234 (applicative/eval-key sample-env a-key {::applicative/context core-async/context}))))))
