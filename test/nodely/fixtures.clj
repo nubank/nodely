@@ -3,6 +3,9 @@
    [clojure.test.check.generators :as gen]
    [nodely.data :as data]))
 
+(def keyword-gen
+  (gen/bind (gen/return nil) (fn [_] (gen/return (keyword (gensym))))))
+
 (defn branch-count
   [env]
   (count (filter #(= (::data/type %) :branch) (mapcat data/flatten (vals env)))))
@@ -46,7 +49,7 @@
   [env]
   (gen/let [inputs (subset (keys env))
             input-node (gen/return (data/leaf inputs (fn [env] (vec (vals (select-keys env inputs))))))
-            [input-key sequence-key] (gen/fmap seq (gen/set gen/keyword {:num-elements 2}))]
+            [input-key sequence-key] (gen/fmap seq (gen/set keyword-gen {:num-elements 2}))]
     {input-key    input-node
      sequence-key (data/sequence input-key identity)}))
 
@@ -59,7 +62,7 @@
            node-generator (fn [_] value-gen)}}]
   (gen/let [number-of-nodes (gen/choose min-nodes max-nodes)
             nodes           (gen/vector (node-generator env) number-of-nodes)
-            keys            (gen/vector gen/keyword number-of-nodes)
+            keys            (gen/vector keyword-gen number-of-nodes)
             sequence-env    (if add-sequence? (sequence-gen env) (gen/return {}))]
     (into sequence-env (for [k keys
                              v nodes]
