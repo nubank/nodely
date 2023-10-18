@@ -11,14 +11,27 @@
 
 (declare eval-async)
 
+(defn async-sequence-fn
+  [node lazy-env]
+  (async/go
+    (or (:data/fn node)
+        ((::data/fn-fn node)
+         (loop [[cur & pending] (::data/closure-inputs node)
+                res {}]
+           (if cur
+             (recur pending (assoc res cur (async/<! (get lazy-env cur))))
+             res))))))
+
 (defn eval-sequence
   [node
-   sequence-input-promise-chan
+   lazy-env
    {::keys [max-sequence-parallelism out-ch exception-ch]
     :or {max-sequence-parallelism 4}}]
   (nodely.async/jog
-   (let [f               (::data/fn node)
-         sequence        (map data/value (::data/value (async/<! sequence-input-promise-chan)))
+   (let [dep             (::data/input node)
+         input-chan      (get lazy-env dep)
+         f               (async/<! (async-sequence-fn node lazy-env))
+         sequence        (map data/value (::data/value (async/<! input-chan)))
          in-chan         (async/to-chan! sequence)
          pipeline-result (async/chan)]
      (async/pipeline-async max-sequence-parallelism
@@ -74,9 +87,7 @@
                                                                                         ::data/tags
                                                                                         ::data/blocking)})
                                                     exception-ch))))
-      :sequence (let [dep  (::data/input node)
-                      chan (get lazy-env dep)]
-                  (eval-sequence node chan opts))
+      :sequence (eval-sequence node lazy-env opts)
       :branch   (eval-branch node lazy-env opts)))
   out-ch)
 

@@ -123,11 +123,17 @@
   [k env]
   (resolve k (resolve-one-branch k env)))
 
+(defn sequence-fn
+  ([node env]
+   (sequence-fn prepare-inputs node env))
+  ([inputs-fn node env]
+   (or (::data/fn node)
+       ((::data/fn-fn node) (inputs-fn (::data/closure-inputs node) env)))))
+
 (defn- sequence->value
   [node env]
   (let [in-key  (::data/input node)
-        f       (or (::data/fn node)
-                    ((::data/fn-fn node) (prepare-inputs (::data/closure-inputs node) env)))
+        f       (sequence-fn node env)
         new-env (resolve-inputs [in-key] env)
         in      (data/get-value new-env in-key)]
     [(data/value (mapv f in)) new-env]))
