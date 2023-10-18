@@ -20,7 +20,7 @@
 (defn eval-sequence
   [node future-env]
   (let [in-key (::data/input node)
-        f      (::data/fn node)
+        f      (core/sequence-fn prepare-inputs node future-env)
         in     (prepare-inputs [in-key] future-env)]
     (data/value (->> (get in in-key)
                      (mapv #(deferred/future (f %)))
