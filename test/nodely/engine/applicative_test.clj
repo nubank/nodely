@@ -8,6 +8,7 @@
    [nodely.data :as data]
    [nodely.engine.applicative :as applicative]
    [nodely.engine.applicative.core-async :as core-async]
+   [nodely.engine.applicative.manifold :as manifold]
    [nodely.engine.applicative.synchronous :as synchronous]
    [nodely.engine.core :as core]
    [nodely.engine.core-async.core :as nodely.async]
@@ -183,3 +184,28 @@
     (testing "channel-leaf"
       (is (= 7 (applicative/eval-key env+channel-leaf :c {::applicative/context core-async/context}))))))
 
+(deftest manifold-applicative-test
+  (let [simple-env {:a (>value 2)
+                    :b (>value 1)
+                    :c (>leaf (+ ?a ?b))}
+        env-with-failing-schema {:a (>value 2)
+                                 :b (>value 1)
+                                 :c (yielding-schema (>leaf (+ ?a ?b)) s/Bool)}]
+    (testing "it should not fail"
+      (is (match? 3 (applicative/eval-key simple-env :c {::applicative/context manifold/context}))))
+
+; expected: (match? 3 (applicative/eval-key simple-env :c #:nodely.engine.applicative{:context manifold/context}))
+;   actual: java.lang.IllegalArgumentException: No implementation of method: :-extract of protocol: #'cats.protocols/Extract found for class: manifold.deferred.SuccessDeferred
+
+    (testing "more complicated example"
+      (is (match? 4 (applicative/eval-key tricky-example :z {::applicative/context manifold/context}))))
+
+    #_(testing "returns ex-info when schema is selected as fvalidate, and schema fn validation is enabled"
+        (is (thrown-match? clojure.lang.ExceptionInfo
+                           {:type   :schema.core/error
+                            :schema java.lang.Boolean
+                            :value  3}
+                           (ex-data
+                            (s/with-fn-validation
+                              (applicative/eval-key env-with-failing-schema :c {::applicative/fvalidate schema/fvalidate
+                                                                                ::applicative/context manifold/context}))))))))

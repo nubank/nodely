@@ -4,7 +4,7 @@
 
 (declare context)
 
-(extend-type manifold.deferred.Deferred
+(extend-type manifold.deferred.SuccessDeferred
   mp/Contextual
   (-get-context [_] context)
 
