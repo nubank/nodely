@@ -19,6 +19,7 @@
              nodely.syntax/>or
              nodely.syntax/>value
              nodely.syntax/>sequence
+             nodely.syntax/blocking
              nodely.engine.core-async.core/>channel-leaf
              nodely.data/value
              nodely.data/leaf
