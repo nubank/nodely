@@ -1,6 +1,7 @@
 (ns nodely.engine.applicative.manifold
-  (:require [cats.protocols :as mp]
-            [manifold.deferred :as deferred]))
+  (:require
+   [cats.protocols :as mp]
+   [manifold.deferred :as deferred]))
 
 (declare context)
 
@@ -8,6 +9,13 @@
   mp/Contextual
   (-get-context [_] context)
 
+  mp/Extract
+  (-extract [it]
+    (try (deref it)
+         (catch java.util.concurrent.ExecutionException e
+           (throw (.getCause e))))))
+
+(extend-type manifold.deferred.ErrorDeferred
   mp/Extract
   (-extract [it]
     (try (deref it)

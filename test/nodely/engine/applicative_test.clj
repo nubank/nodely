@@ -194,18 +194,15 @@
     (testing "it should not fail"
       (is (match? 3 (applicative/eval-key simple-env :c {::applicative/context manifold/context}))))
 
-; expected: (match? 3 (applicative/eval-key simple-env :c #:nodely.engine.applicative{:context manifold/context}))
-;   actual: java.lang.IllegalArgumentException: No implementation of method: :-extract of protocol: #'cats.protocols/Extract found for class: manifold.deferred.SuccessDeferred
-
     (testing "more complicated example"
       (is (match? 4 (applicative/eval-key tricky-example :z {::applicative/context manifold/context}))))
 
-    #_(testing "returns ex-info when schema is selected as fvalidate, and schema fn validation is enabled"
-        (is (thrown-match? clojure.lang.ExceptionInfo
-                           {:type   :schema.core/error
-                            :schema java.lang.Boolean
-                            :value  3}
-                           (ex-data
-                            (s/with-fn-validation
-                              (applicative/eval-key env-with-failing-schema :c {::applicative/fvalidate schema/fvalidate
-                                                                                ::applicative/context manifold/context}))))))))
+    (testing "returns ex-info when schema is selected as fvalidate, and schema fn validation is enabled"
+      (is (thrown-match? clojure.lang.ExceptionInfo
+                         {:type   :schema.core/error
+                          :schema java.lang.Boolean
+                          :value  3}
+                         (ex-data
+                          (s/with-fn-validation
+                            (applicative/eval-key env-with-failing-schema :c {::applicative/fvalidate schema/fvalidate
+                                                                              ::applicative/context manifold/context}))))))))
