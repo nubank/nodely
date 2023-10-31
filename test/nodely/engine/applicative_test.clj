@@ -205,4 +205,4 @@
                          (ex-data
                           (s/with-fn-validation
                             (applicative/eval-key env-with-failing-schema :c {::applicative/fvalidate schema/fvalidate
-                                                                              ::applicative/context manifold/context}))))))))
+                                                                              ::applicative/context   manifold/context}))))))))

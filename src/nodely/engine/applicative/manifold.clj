@@ -29,11 +29,10 @@
     (-fmap [_ f mv]
       (deferred/chain mv f))
 
-    mp/Monad ;; goood
+    mp/Monad
     (-mreturn [_ v]
       (deferred/success-deferred v))
 
-    ;; Channel a -> (a -> Channel b) -> Channel b
     (-mbind [_ mv f]
       (deferred/chain mv (fn [v]
                            (f v))))
