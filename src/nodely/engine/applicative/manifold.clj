@@ -6,9 +6,13 @@
 (declare context)
 
 (extend-type manifold.deferred.SuccessDeferred
-  mp/Contextual
-  (-get-context [_] context)
+  mp/Extract
+  (-extract [it]
+    (try (deref it)
+         (catch java.util.concurrent.ExecutionException e
+           (throw (.getCause e))))))
 
+(extend-type manifold.deferred.Deferred
   mp/Extract
   (-extract [it]
     (try (deref it)
@@ -31,7 +35,7 @@
 
     mp/Monad
     (-mreturn [_ v]
-      (deferred/success-deferred v))
+      (deferred/future v))
 
     (-mbind [_ mv f]
       (deferred/chain mv (fn [v]
@@ -39,7 +43,7 @@
 
     mp/Applicative
     (-pure [_ v]
-      (deferred/success-deferred v))
+      (deferred/future v))
 
     (-fapply [_ pf pv]
       (deferred/chain (deferred/zip' pf pv)
