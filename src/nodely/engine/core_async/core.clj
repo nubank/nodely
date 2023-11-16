@@ -9,6 +9,13 @@
   [ex-ch & body]
   `(async/go (try ~@body (catch Throwable t# (async/>! ~ex-ch t#)))))
 
+(defmacro meander-blocking
+  "Wraps user expressions and pipes any exception through ex-ch, runs in
+  the core.async 'thread' worker pool so that blocking operations
+  aren't (as) problematic."
+  [ex-ch & body]
+  `(async/thread (try ~@body (catch Throwable t# (async/>!! ~ex-ch t#)))))
+
 (defn user-exception
   [exception]
   (ex-info "User code exception" {:type :user-code-exception} exception))
@@ -72,8 +79,9 @@
 (extend-protocol FnToChannel
   clojure.lang.IFn
   (evaluation-channel [the-fn args opts]
-    (meander (:exception-ch opts)
-             (data/value (the-fn args)))))
+    (if (:blocking opts)
+      (meander-blocking (:exception-ch opts) (data/value (the-fn args)))
+      (meander (:exception-ch opts) (data/value (the-fn args))))))
 
 (defrecord AsyncThunk
            [channel-fn]
