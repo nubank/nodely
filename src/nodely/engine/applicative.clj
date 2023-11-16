@@ -44,7 +44,7 @@
                     (eval-node falsey lazy-env opts))]
           result))
 
-(defn- apply-f
+#_(defn- apply-f
   [context f deps-keys deps]
   (let [in     (core/prepare-inputs deps-keys (zipmap deps-keys deps))]
     (if (instance? nodely.engine.core_async.core.AsyncThunk f)
@@ -63,10 +63,15 @@
 (defn eval-leaf
   [leaf lazy-env {::keys [context]}]
   (let [deps-keys (seq (::data/inputs leaf))
-        f         (::data/fn leaf)]
-    (m/alet [deps (sequence (mapv #(get lazy-env %) deps-keys))
-             result (apply-f context f deps-keys deps)]
-            result)))
+        tags      (::data/tags leaf)
+        f         (with-meta (::data/fn leaf)
+                    {::data/tags tags})]
+    (m/fmap #(if (in-context? % context)
+               (data/value (m/extract %)) ;; BLOCKING OP!!!
+               (data/value %))
+            (m/fmap f
+                    (m/fmap #(core/prepare-inputs deps-keys (zipmap deps-keys %))
+                            (sequence (mapv #(get lazy-env %) deps-keys)))))))
 
 (defn eval-node
   [node lazy-env opts]

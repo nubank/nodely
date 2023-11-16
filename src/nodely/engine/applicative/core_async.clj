@@ -3,7 +3,8 @@
    [cats.protocols :as mp]
    [clojure.core.async :as async]
    [clojure.core.async.impl.channels :as impl]
-   [nodely.data :as data])
+   [nodely.data :as data]
+   [nodely.engine.core-async.core :as core-async.core])
   (:import
    [clojure.core.async.impl.channels ManyToManyChannel]))
 
@@ -81,8 +82,20 @@
     mp/Context
     mp/Functor
     (-fmap [mn f mv]
-      (go-future (let [v (<? mv)]
-                   (f v))))
+      (let [tags (::data/tags (meta f))]
+        (cond (instance? nodely.engine.core_async.core.AsyncThunk f)
+              (go-future (let [in           (<? mv)
+                               exception-ch (async/promise-chan)
+                               result-ch    (core-async.core/evaluation-channel f in {:exception-ch exception-ch})
+                               result       (<? result-ch)]
+                           (::data/value result)
+                           #_(async/merge [exception-ch result-ch])))
+              (contains? tags ::data/blocking)
+              (async/thread (let [v (<? mv)]
+                              (f v)))
+              :else
+              (go-future (let [v (<? mv)]
+                           (f v))))))
 
     mp/Monad
     (-mreturn [_ v]
