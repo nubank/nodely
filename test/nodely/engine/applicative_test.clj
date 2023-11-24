@@ -15,6 +15,7 @@
    [nodely.engine.applicative.synchronous :as synchronous]
    [nodely.engine.core :as core]
    [nodely.engine.core-async.core :as nodely.async]
+   [nodely.engine.core-async.lazy-scheduling :as lazy-scheduling]
    [nodely.engine.schema :as schema]
    [nodely.fixtures :as fixtures]
    [nodely.syntax :as syntax :refer [>leaf >value]]
@@ -254,8 +255,12 @@
 
 (deftest compare-engines
   (let [sample-env (gen/generate (fixtures/env-gen {:node-generator fixtures/scalar-gen
-                                                    :min-stages     10
-                                                    :max-stages     10}))
-        a-key      (last (alg/topsort (core/env->graph sample-env)))]
-    #_(testing ""
-        (is (= 234 (applicative/eval-key sample-env a-key {::applicative/context core-async/context}))))))
+                                                    :min-stages     20
+                                                    :max-stages     20}))
+        a-key      (last (alg/topsort (core/env->graph sample-env)))
+        [time-applicative res-applicative] (criterium/time-body (applicative/eval-key sample-env a-key {::applicative/context core-async/context}))
+        [time-lazy-sched res-lazy-sched]  (criterium/time-body (lazy-scheduling/eval-key sample-env a-key))]
+    (testing "results are the same"
+      (is (= res-applicative res-lazy-sched)))
+    (testing "applicative is faster than lazy scheduler"
+      (is (match? neg? (- time-applicative time-lazy-sched))))))
