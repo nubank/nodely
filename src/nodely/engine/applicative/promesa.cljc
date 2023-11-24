@@ -1,10 +1,10 @@
 (ns nodely.engine.applicative.promesa
   (:require
    [cats.protocols :as mp]
+   [nodely.engine.applicative.protocols :as protocols]
    [promesa.core :as p]
    [promesa.protocols :as pp]
-   #?(:cljs [promesa.impl :as pi])
-   [nodely.engine.applicative.protocols :as protocols])
+   #?(:cljs [promesa.impl :as pi]))
   #?(:clj
      (:import
       java.util.concurrent.CompletableFuture)))

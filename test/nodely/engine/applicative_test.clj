@@ -3,8 +3,10 @@
    [clojure.core.async :as async]
    [clojure.test :refer :all]
    [clojure.test.check.clojure-test :refer [defspec]]
+   [clojure.test.check.generators :as gen]
    [clojure.test.check.properties :as prop]
    [criterium.core :as criterium]
+   [loom.alg :as alg]
    [matcher-combinators.matchers :as matchers]
    [matcher-combinators.test :refer [match?]]
    [nodely.data :as data]
@@ -18,9 +20,7 @@
    [nodely.syntax :as syntax :refer [>leaf >value]]
    [nodely.syntax.schema :refer [yielding-schema]]
    [promesa.core :as p]
-   [schema.core :as s]
-   [clojure.test.check.generators :as gen]
-   [loom.alg :as alg]))
+   [schema.core :as s]))
 
 (def test-env {:a (>value 2)
                :b (>value 1)
@@ -237,4 +237,4 @@
                                                     :max-stages     10}))
         a-key      (last (alg/topsort (core/env->graph sample-env)))]
     #_(testing ""
-      (is (= 234 (applicative/eval-key sample-env a-key {::applicative/context core-async/context}))))))
+        (is (= 234 (applicative/eval-key sample-env a-key {::applicative/context core-async/context}))))))

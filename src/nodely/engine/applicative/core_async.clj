@@ -93,7 +93,7 @@
     mp/Functor
     (-fmap [mn f mv]
       (go-future (let [v (<? mv)]
-                           (f v))))
+                   (f v))))
 
     mp/Monad
     (-mreturn [_ v]
@@ -113,8 +113,4 @@
     (-fapply [_ pf pv] ;; good??
       (go-future (let [f (<? pf)
                        v (<? pv)]
-                   (f v))))
-
-    )
-
-  )
+                   (f v))))))
