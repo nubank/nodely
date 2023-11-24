@@ -61,6 +61,17 @@
                             :b-name (>leaf (.getName ?b))
                             :c (>leaf (str ?a-name " " ?b-name))})
 
+(def env-with-nine-sleeps {:a (syntax/blocking (>leaf (do (Thread/sleep 1000) :a)))
+                           :b (syntax/blocking (>leaf (do (Thread/sleep 1000) :b)))
+                           :c (syntax/blocking (>leaf (do (Thread/sleep 1000) :c)))
+                           :d (syntax/blocking (>leaf (do (Thread/sleep 1000) :d)))
+                           :e (syntax/blocking (>leaf (do (Thread/sleep 1000) :e)))
+                           :f (syntax/blocking (>leaf (do (Thread/sleep 1000) :f)))
+                           :g (syntax/blocking (>leaf (do (Thread/sleep 1000) :g)))
+                           :h (syntax/blocking (>leaf (do (Thread/sleep 1000) :h)))
+                           :i (syntax/blocking (>leaf (do (Thread/sleep 1000) :i)))
+                           :z (>leaf (into #{} [?a ?b ?c ?d ?e ?f ?g ?h ?i]))})
+
 (def env-with-sequence {:a (>leaf [1 2 3])
                         :b (syntax/>sequence inc ?a)})
 
@@ -223,6 +234,16 @@
                 (applicative/eval-key env-with-blocking-tag :b-name {::applicative/context core-async/context})))
     (is (match? #"async-dispatch-\d+"
                 (applicative/eval-key env-with-blocking-tag :a-name {::applicative/context core-async/context})))))
+
+(deftest thread-sleeping-test-proves-thread-works-how-we-expect
+  (testing "actually only 8 threads in the async dispatch worker pool"
+    (is (match? 8
+                @@#'clojure.core.async.impl.exec.threadpool/pool-size)))
+  (testing "when we have 9 1-second blocking nodes in one environment, it can run in fewer than 2 seconds"
+    (testing "async version runs parallel when option is neglected"
+      (let [[nanosec-async _] (criterium/time-body (applicative/eval-key env-with-nine-sleeps :z {::applicative/context core-async/context}))]
+        (is (match? (matchers/within-delta 1000000000 1000000000)
+                    nanosec-async))))))
 
 (defspec does-not-blow-up-spec
   (prop/for-all [env (fixtures/env-gen {})]
