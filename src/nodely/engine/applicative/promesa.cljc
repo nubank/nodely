@@ -3,7 +3,8 @@
    [cats.protocols :as mp]
    [promesa.core :as p]
    [promesa.protocols :as pp]
-   #?(:cljs [promesa.impl :as pi]))
+   #?(:cljs [promesa.impl :as pi])
+   [nodely.engine.applicative.protocols :as protocols])
   #?(:clj
      (:import
       java.util.concurrent.CompletableFuture)))
@@ -37,6 +38,9 @@
 (def ^:no-doc context
   (reify
     mp/Context
+    protocols/RunNode
+    (-apply-fn  [_ f mv]
+      (pp/-map mv f))
     mp/Functor
     (-fmap [mn f mv]
       (pp/-map mv f))

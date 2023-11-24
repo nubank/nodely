@@ -9,7 +9,8 @@
    [nodely.engine.applicative.promesa :as promesa]
    [nodely.engine.core :as core]
    [nodely.engine.core-async.core :as core-async.core]
-   [nodely.engine.lazy-env :as lazy-env]))
+   [nodely.engine.lazy-env :as lazy-env]
+   [nodely.engine.applicative.protocols :as protocols]))
 
 (prefer-method pp/simple-dispatch clojure.lang.IPersistentMap clojure.lang.IDeref)
 
@@ -44,18 +45,6 @@
                     (eval-node falsey lazy-env opts))]
           result))
 
-#_(defn- apply-f
-  [context f deps-keys deps]
-  (let [in     (core/prepare-inputs deps-keys (zipmap deps-keys deps))]
-    (if (instance? nodely.engine.core_async.core.AsyncThunk f)
-      (let [exception-ch (async/promise-chan)
-            result-ch    (core-async.core/evaluation-channel f in {:exception-ch exception-ch})]
-        (async/merge [exception-ch result-ch]))
-      (let [result (f in)]
-        (if (in-context? result context)
-          (m/fmap data/value result)
-          (m/pure context (data/value result)))))))
-
 (defn noop-validate
   [return _]
   return)
@@ -66,12 +55,11 @@
         tags      (::data/tags leaf)
         f         (with-meta (::data/fn leaf)
                     {::data/tags tags})]
-    (m/fmap #(if (in-context? % context)
-               (data/value (m/extract %)) ;; BLOCKING OP!!!
-               (data/value %))
-            (m/fmap f
-                    (m/fmap #(core/prepare-inputs deps-keys (zipmap deps-keys %))
-                            (sequence (mapv #(get lazy-env %) deps-keys)))))))
+    (m/mlet [v (protocols/apply-fn f (m/fmap #(core/prepare-inputs deps-keys (zipmap deps-keys %))
+                                             (sequence (mapv #(get lazy-env %) deps-keys))))]
+            (if (in-context? v context)
+              (m/fmap data/value v)
+              (m/pure context (data/value v))))))
 
 (defn eval-node
   [node lazy-env opts]

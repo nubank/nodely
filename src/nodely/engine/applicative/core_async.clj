@@ -4,6 +4,7 @@
    [clojure.core.async :as async]
    [clojure.core.async.impl.channels :as impl]
    [nodely.data :as data]
+   [nodely.engine.applicative.protocols :as protocols]
    [nodely.engine.core-async.core :as core-async.core])
   (:import
    [clojure.core.async.impl.channels ManyToManyChannel]))
@@ -71,31 +72,28 @@
                  (async/>! ret# retv#)))
      ret#))
 
-;; WIP Let's try abstracting the pattern we've been repeatedly doing
-;; BUT with error handling
-#_(defmacro go-promise
-    [& body]
-    (async/go (try ~@body)))
-
 (def ^:no-doc context
   (reify
     mp/Context
-    mp/Functor
-    (-fmap [mn f mv]
+    protocols/RunNode
+    (-apply-fn [_ f mv]
       (let [tags (::data/tags (meta f))]
         (cond (instance? nodely.engine.core_async.core.AsyncThunk f)
               (go-future (let [in           (<? mv)
                                exception-ch (async/promise-chan)
                                result-ch    (core-async.core/evaluation-channel f in {:exception-ch exception-ch})
-                               result       (<? result-ch)]
-                           (::data/value result)
-                           #_(async/merge [exception-ch result-ch])))
+                               result       (<? result-ch)] ;; we are ignoring exception-ch here
+                           (::data/value result)))
               (contains? tags ::data/blocking)
-              (async/thread (let [v (<? mv)]
-                              (f v)))
+              (go-future (let [v (<? mv)]
+                           (async/thread (f v))))
               :else
               (go-future (let [v (<? mv)]
                            (f v))))))
+    mp/Functor
+    (-fmap [mn f mv]
+      (go-future (let [v (<? mv)]
+                           (f v))))
 
     mp/Monad
     (-mreturn [_ v]
@@ -115,4 +113,8 @@
     (-fapply [_ pf pv] ;; good??
       (go-future (let [f (<? pf)
                        v (<? pv)]
-                   (f v))))))
+                   (f v))))
+
+    )
+
+  )

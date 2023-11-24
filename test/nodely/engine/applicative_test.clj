@@ -55,6 +55,12 @@
                                      (>leaf ?c))
                      :z (>leaf ?w)})
 
+(def env-with-blocking-tag {:a (>leaf (Thread/currentThread))
+                            :b (syntax/blocking (>leaf (Thread/currentThread)))
+                            :a-name (>leaf (.getName ?a))
+                            :b-name (>leaf (.getName ?b))
+                            :c (>leaf (str ?a-name " " ?b-name))})
+
 (def env-with-sequence {:a (>leaf [1 2 3])
                         :b (syntax/>sequence inc ?a)})
 
@@ -210,6 +216,13 @@
       (is (= 7 (applicative/eval-key env+go-block :c {::applicative/context core-async/context}))))
     (testing "channel-leaf"
       (is (= 7 (applicative/eval-key env+channel-leaf :c {::applicative/context core-async/context}))))))
+
+(deftest core-async-blocking-eval-test
+  (testing "eval of a blocking tagged node will happen in the `async-thread-macro` worker pool"
+    (is (match? #"async-thread-macro-\d+"
+                (applicative/eval-key env-with-blocking-tag :b-name {::applicative/context core-async/context})))
+    (is (match? #"async-dispatch-\d+"
+                (applicative/eval-key env-with-blocking-tag :a-name {::applicative/context core-async/context})))))
 
 (defspec does-not-blow-up-spec
   (prop/for-all [env (fixtures/env-gen {})]
