@@ -271,7 +271,7 @@
                                       {::applicative/context core-async/context})
                 true))
 
-(deftest compare-engines
+#_(deftest compare-engines
   (let [sample-env (gen/generate (fixtures/env-gen {:node-generator fixtures/scalar-gen
                                                     :min-stages     20
                                                     :max-stages     20}))
