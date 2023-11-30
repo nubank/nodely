@@ -29,7 +29,10 @@
                                             (nodely.async/evaluation-channel
                                              f
                                              (::data/value v)
-                                             {:exception-ch exception-ch})
+                                             {:exception-ch exception-ch
+                                              :blocking (-> node
+                                                            ::data/tags
+                                                            ::data/blocking)})
                                             exception-ch))
                               (async/close! ch)))
                            in-chan)
@@ -66,7 +69,10 @@
                        in         (core/prepare-inputs (::data/inputs node) values)]
                    (async/>! out-ch
                              (nodely.async/<request (nodely.async/evaluation-channel
-                                                     (::data/fn node) in {:exception-ch exception-ch})
+                                                     (::data/fn node) in {:exception-ch exception-ch
+                                                                          :blocking (-> node
+                                                                                        ::data/tags
+                                                                                        ::data/blocking)})
                                                     exception-ch))))
       :sequence (let [dep  (::data/input node)
                       chan (get lazy-env dep)]

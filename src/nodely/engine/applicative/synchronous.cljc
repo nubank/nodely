@@ -1,6 +1,7 @@
 (ns nodely.engine.applicative.synchronous
   (:require
-   [cats.protocols :as mp]))
+   [cats.protocols :as mp]
+   [nodely.engine.applicative.protocols :as protocols]))
 
 (declare context)
 
@@ -22,6 +23,9 @@
 (def ^:no-doc context
   (reify
     mp/Context
+    protocols/RunNode
+    (-apply-fn [_ f mv]
+      (box (f (unbox mv))))
     mp/Functor
     (-fmap [_ f mv]
       (box (f (unbox mv))))

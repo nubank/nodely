@@ -9,12 +9,15 @@
 
 (declare Node)
 
+(def node-tag (s/enum ::blocking))
+
 (s/defschema Value #::{:type  (s/eq :value)
                        :value s/Any})
 
 (s/defschema Leaf #::{:type   (s/eq :leaf)
                       :inputs #{s/Keyword}
-                      :fn     (s/pred ifn?)})
+                      :fn     (s/pred ifn?)
+                      :tags   #{node-tag}})
 
 (s/defschema Branch #::{:type      (s/eq :branch)
                         :condition (s/recursive #'Node)
@@ -23,7 +26,8 @@
 
 (s/defschema Sequence #::{:type  (s/eq :sequence)
                           :input s/Keyword
-                          :fn    (s/pred ifn?)})
+                          :fn    (s/pred ifn?)
+                          :tags  #{node-tag}})
 
 (s/defschema Node (s/conditional
                    #(= (get % ::type) :value) Value
@@ -43,11 +47,16 @@
       :value v})
 
 (s/defn leaf :- Leaf
-  [inputs :- (s/pred seqable?)
-   fn]
-  #::{:type   :leaf
-      :inputs (set inputs)
-      :fn     fn})
+  ([inputs :- (s/pred seqable?)
+    fn]
+   (leaf inputs fn #{}))
+  ([inputs :- (s/pred seqable?)
+    fn
+    tags :- #{node-tag}]
+   #::{:type   :leaf
+       :inputs (set inputs)
+       :fn     fn
+       :tags   tags}))
 
 (s/defn branch :- Branch
   [condition-node :- Node
@@ -59,11 +68,16 @@
       :falsey    falsey-node})
 
 (s/defn sequence
-  [input :- s/Keyword
-   fn]
-  #::{:type  :sequence
-      :input input
-      :fn    fn})
+  ([input :- s/Keyword
+    fn]
+   (sequence input fn #{}))
+  ([input :- s/Keyword
+    fn
+    tags :- #{node-tag}]
+   #::{:type  :sequence
+       :input input
+       :fn    fn
+       :tags  tags}))
 
 ;;
 ;; Node Utilities

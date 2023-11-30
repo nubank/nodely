@@ -77,3 +77,7 @@
 (defn >value
   [v]
   (data/value v))
+
+(defn blocking
+  [node]
+  (update node ::data/tags conj ::data/blocking))

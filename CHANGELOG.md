@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+- Fix bug preventing nil values to the passed through channels on core-async applicative engine
+- Create a blocking tag that allows leafs and sequences to be tagged with blocking to signal that they contain a blocking IO or other expensive blocking op. Engines can choose to optimize runs with this info
+- Core Async Lazy Scheduler and Core-Async Applicative support for blocking tags. Leafs with blocking tags will be dispatched through the dynamic thread pool instead of the fixed core-async worker pool
+
 ## 1.13.0 / 2023-09-12
 - Add checked-env function for cycle detection in env
 - Added applicative synchronous engine (:async.applicative)
