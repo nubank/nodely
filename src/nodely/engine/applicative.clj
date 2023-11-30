@@ -83,6 +83,14 @@
          lazy-env (lazy-env/lazy-env env eval-in-context opts)]
      (::data/value (m/extract (get lazy-env k))))))
 
+(defn eval-key-contextual
+  ([env k]
+   (eval-key env k {}))
+  ([env k opts]
+   (let [opts (merge {::context promesa/context} opts)
+         lazy-env (lazy-env/lazy-env env eval-in-context opts)]
+     (m/fmap ::data/value (get lazy-env k)))))
+
 (defn eval
   ([env k]
    (eval env k {::context promesa/context}))

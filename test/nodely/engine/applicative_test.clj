@@ -12,6 +12,7 @@
    [nodely.data :as data]
    [nodely.engine.applicative :as applicative]
    [nodely.engine.applicative.core-async :as core-async]
+   [nodely.engine.applicative.promesa :as promesa]
    [nodely.engine.applicative.synchronous :as synchronous]
    [nodely.engine.core :as core]
    [nodely.engine.core-async.core :as nodely.async]
@@ -102,6 +103,23 @@
                        :b (nodely.async/>channel-leaf
                            (async/go (+ ?a 5)))
                        :c (>leaf (+ ?a ?b))})
+
+(def interesting-example {:x (data/value 22)
+                          :y (data/value 13)
+                          :w (data/value 1)
+                          :z (data/branch (>leaf (even? ?w))
+                                          (>leaf (inc ?x))
+                                          (>leaf (inc ?y)))})
+
+(def env+exception {:a (>value 1)
+                    :b (>leaf (throw (ex-info "Oops" {:some-data "data"})))
+                    :c (>leaf (+ ?a ?b))})
+
+(def env+channel-throw {:a (>value 1)
+                        :b (nodely.async/>channel-leaf
+                            (async/go (throw (ex-info "Exception in Channel"
+                                                      {:data "data"}))))
+                        :c (>leaf (+ ?a ?b))})
 
 (deftest eval-key-test
   (testing "eval promise"
@@ -264,3 +282,33 @@
       (is (= res-applicative res-lazy-sched)))
     (testing "applicative is faster than lazy scheduler"
       (is (match? neg? (- time-applicative time-lazy-sched))))))
+
+(deftest eval-key-contextual-test
+  (testing "eval node async for interesting example"
+    (is (match? 14
+                (async/<!! (applicative/eval-key-contextual interesting-example :z {::applicative/context core-async/context})))))
+  (testing "trivial example"
+    (is (match? false
+                (async/<!! (applicative/eval-key-contextual {:a (data/value false)} :a {::applicative/context core-async/context})))))
+  (testing "tricky example"
+    (is (match? 4
+                (async/<!! (applicative/eval-key-contextual tricky-example :z {::applicative/context core-async/context})))))
+  (testing "env with exception"
+    (is (match? {:some-data "data"}
+                (ex-data (async/<!! (applicative/eval-key-contextual env+exception :c {::applicative/context core-async/context}))))))
+  (testing "env with channel leaf throwing"
+    (is (match?
+         {:channel any?}
+         (ex-data (async/<!! (applicative/eval-key-contextual env+channel-throw :c {::applicative/context core-async/context}))))))
+  (testing "returns CompletableFuture when context is promesa"
+    (is (match?
+         java.util.concurrent.CompletableFuture
+         (type (applicative/eval-key-contextual env+exception :c {::applicative/context promesa/context}))))))
+
+(deftest eval-key-contextual-return-type-test
+  (are [context expected-type]
+       (= expected-type
+          (type (applicative/eval-key-contextual {:a (data/value 1)} :a {::applicative/context context})))
+    promesa/context     java.util.concurrent.CompletableFuture
+    core-async/context  clojure.core.async.impl.channels.ManyToManyChannel
+    synchronous/context nodely.engine.applicative.synchronous.Box))

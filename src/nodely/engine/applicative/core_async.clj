@@ -82,7 +82,8 @@
               (go-future (let [in           (<? mv)
                                exception-ch (async/promise-chan)
                                result-ch    (core-async.core/evaluation-channel f in {:exception-ch exception-ch})
-                               result       (<? result-ch)] ;; we are ignoring exception-ch here
+                               merged-chs   (async/merge [result-ch exception-ch])
+                               result       (<? merged-chs)]
                            (::data/value result)))
               (contains? tags ::data/blocking)
               (go-future (let [v (<? mv)]
