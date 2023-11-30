@@ -271,18 +271,6 @@
                                       {::applicative/context core-async/context})
                 true))
 
-#_(deftest compare-engines
-  (let [sample-env (gen/generate (fixtures/env-gen {:node-generator fixtures/scalar-gen
-                                                    :min-stages     20
-                                                    :max-stages     20}))
-        a-key      (last (alg/topsort (core/env->graph sample-env)))
-        [time-applicative res-applicative] (criterium/time-body (applicative/eval-key sample-env a-key {::applicative/context core-async/context}))
-        [time-lazy-sched res-lazy-sched]  (criterium/time-body (lazy-scheduling/eval-key sample-env a-key))]
-    (testing "results are the same"
-      (is (= res-applicative res-lazy-sched)))
-    (testing "applicative is faster than lazy scheduler"
-      (is (match? neg? (- time-applicative time-lazy-sched))))))
-
 (deftest eval-key-contextual-test
   (testing "eval node async for interesting example"
     (is (match? 14
