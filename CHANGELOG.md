@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.14.1 / 2023-12-05
+- Fix bug that allowed a leaf body to be run multiple times in engines which used the lazy environment.
+
 ## 1.14.0 / 2023-11-30
 - Fix bug preventing nil values to the passed through channels on core-async applicative engine
 - Create a blocking tag that allows leafs and sequences to be tagged with blocking to signal that they contain a blocking IO or other expensive blocking op. Engines can choose to optimize runs with this info
