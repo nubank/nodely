@@ -1,7 +1,21 @@
 (ns nodely.api-test
   (:refer-clojure :exclude [cond])
   (:require
-   [clojure.test :refer :all]))
+   [clojure.core.async :as async]
+   [clojure.test :refer :all]
+   [nodely.api.v0 :as api :refer [>value >leaf eval-key-channel]]))
+
+(def env {:x (>value 2)
+          :y (>value 3)
+          :z (>leaf (+ ?x ?y))})
+
+(deftest eval-key-channel-test
+  (testing "returning a result to a channel with :sync.lazy"
+    (is (= 5 (async/<!! (eval-key-channel env :z {::api/engine :sync.lazy})))))
+  (testing "returning a result to a channel with :core-async.lazy-scheduling"
+    (is (= 5 (async/<!! (eval-key-channel env :z {::api/engine :core-async.lazy-scheduling})))))
+  (testing "returning a result to a channel with :applicative.core-async"
+    (is (= 5 (async/<!! (eval-key-channel env :z {::api/engine :applicative.core-async}))))))
 
 #_(deftest nested-cond-macros
     (testing "using internal variables"

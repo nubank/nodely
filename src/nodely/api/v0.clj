@@ -68,6 +68,7 @@
            :or    {engine :core-async.lazy-scheduling}
            :as    opts}]
    (case engine
+     :sync.lazy                  (nodely.engine.lazy/eval-key-channel env k)
      :core-async.lazy-scheduling (lazy-scheduling/eval-key-channel env k opts)
      :applicative.core-async     (nodely.engine.applicative/eval-key-contextual env k (assoc opts ::applicative/context applicative.core-async/context)))))
 
