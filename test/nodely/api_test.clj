@@ -3,7 +3,7 @@
   (:require
    [clojure.core.async :as async]
    [clojure.test :refer :all]
-   [nodely.api.v0 :as api :refer [>value >leaf eval-key-channel]]))
+   [nodely.api.v0 :as api :refer [>leaf >value eval-key-channel]]))
 
 (def env {:x (>value 2)
           :y (>value 3)
