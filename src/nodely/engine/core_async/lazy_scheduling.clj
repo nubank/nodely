@@ -19,7 +19,7 @@
          (loop [[cur & pending] (::data/closure-inputs node)
                 res {}]
            (if cur
-             (recur pending (assoc res cur (async/<! (get lazy-env cur))))
+             (recur pending (assoc res cur (::data/value (async/<! (get lazy-env cur)))))
              res))))))
 
 (defn eval-sequence
