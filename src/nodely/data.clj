@@ -30,7 +30,7 @@
                                     :tags  #{node-tag}}
                                 #::{:type           (s/eq :sequence)
                                     :input          s/Keyword
-                                    :closure-inputs #{s/Keyword}
+                                    :closure-inputs [s/Keyword]
                                     :fn-fn          (s/pred ifn?)
                                     :tags  #{node-tag}}))
 
@@ -81,9 +81,17 @@
     tags :- #{node-tag}]
    #::{:type  :sequence
        :input input
-       :closure-inputs #{}
-       :fn-fn (fn [env-deps] f)
-       :tags  tags}))
+       :fn    f
+       :tags  tags})
+  ([input :- s/Keyword
+    closure-inputs
+    f
+    tags :- #{node-tag}]
+   #::{:type           :sequence
+       :input          input
+       :closure-inputs closure-inputs
+       :fn-fn          f
+       :tags           tags}))
 
 ;;
 ;; Node Utilities
