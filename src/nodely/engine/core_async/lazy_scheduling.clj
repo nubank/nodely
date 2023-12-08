@@ -14,7 +14,7 @@
 (defn async-sequence-fn
   [node lazy-env]
   (async/go
-    (or (:data/fn node)
+    (or (::data/fn node)
         ((::data/fn-fn node)
          (loop [[cur & pending] (::data/closure-inputs node)
                 res {}]

@@ -36,8 +36,12 @@
     (data/value n)))
 
 (defmacro >sequence
-  [fn input]
-  (list `data/sequence (question-mark->keyword input) fn))
+  [f input]
+  (let [symbols-to-be-replaced (question-mark-symbols f)
+        closure-inputs (mapv question-mark->keyword symbols-to-be-replaced)
+        fn-fn (fn-with-arg-map symbols-to-be-replaced f)]
+    (assert-not-shadowing! symbols-to-be-replaced)
+    `(data/sequence ~(question-mark->keyword input) ~closure-inputs ~fn-fn #{})))
 
 (defmacro >leaf
   [expr]
