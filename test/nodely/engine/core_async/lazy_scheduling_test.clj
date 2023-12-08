@@ -14,7 +14,7 @@
    [nodely.engine.core-async.lazy-scheduling :as nasync]
    [nodely.engine.lazy :as engine.lazy]
    [nodely.fixtures :as fixtures]
-   [nodely.syntax :as syntax :refer [>cond >leaf >value blocking]]))
+   [nodely.syntax :as syntax :refer [>cond >leaf >value >sequence blocking]]))
 
 (def test-env {:a (>leaf (+ 1 2))
                :b (>leaf (* ?a 2))
@@ -57,7 +57,11 @@
                                 :c ?c})})
 
 (def env-with-sequence {:a (>leaf [1 2 3])
-                        :b (syntax/>sequence inc ?a)})
+                        :b (>sequence inc ?a)})
+
+(def env-with-closure-sequence {:a (>leaf [1 2 3])
+                                :c (>value 2)
+                                :b (>sequence #(* % ?c) ?a)})
 
 (def env+sequence-with-nil-values
   {:a (>leaf [1 2 nil 4])
@@ -142,7 +146,9 @@
       (is (match? (matchers/within-delta 8000000 2000000000)
                   (- nanosec-sync nanosec-async)))))
   (testing "Actually computes the correct answers"
-    (is (= [2 3 4] (nasync/eval-key env-with-sequence+delay :b)))))
+    (is (= [2 3 4] (nasync/eval-key env-with-sequence+delay :b))))
+  (testing "When there's a closure in the sequence expr"
+    (is (= [2 4 6] (nasync/eval-key env-with-closure-sequence :b)))))
 
 (deftest eval-test
   (testing "eval node async"
