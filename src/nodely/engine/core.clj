@@ -59,9 +59,15 @@
     :branch   (branch->value node env)
     :sequence (sequence->value node env)))
 
+(defn get!
+  [env k]
+  (if-let [node (get env k)]
+    node
+    (throw (ex-info "Missing key on env" {:key k}))))
+
 (defn resolve
   [k env]
-  (let [[node new-env] (node->value (get env k) env)]
+  (let [[node new-env] (node->value (get! env k) env)]
     (assoc new-env k node)))
 
 (defn- resolve-inputs
@@ -91,7 +97,7 @@
 
 (defn resolve-leaf
   [k env]
-  (let [[node new-env] (leaf->value (get env k) env)]
+  (let [[node new-env] (leaf->value (get! env k) env)]
     (assoc new-env k node)))
 
 (defn branch-step
@@ -105,7 +111,7 @@
 
 (defn resolve-one-branch
   [k env]
-  (let [[node new-env] (branch-step (get env k) env)]
+  (let [[node new-env] (branch-step (get! env k) env)]
     (assoc new-env k node)))
 
 (defn branch->value
@@ -127,12 +133,12 @@
 
 (defn- resolve-sequence
   [k env]
-  (let [[node new-env] (sequence->value (get env k) env)]
+  (let [[node new-env] (sequence->value (get! env k) env)]
     (assoc new-env k node)))
 
 (defn unbranch
   [k env]
-  (let [node (get env k)]
+  (let [node (get! env k)]
     (case (::data/type node)
       :branch (let [new-env (resolve-one-branch k env)]
                 (recur k new-env))

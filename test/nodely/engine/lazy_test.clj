@@ -4,7 +4,13 @@
    [clojure.test :refer :all]
    [matcher-combinators.test :refer [match?]]
    [nodely.data :as data]
+   [nodely.syntax :refer [>leaf]]
    [nodely.engine.lazy :as lazy]))
+
+(def env-with-missing-key {:b (>leaf (* ?a 2))
+                           :c (>leaf (* ?a 3))
+                           :d (>leaf {:b ?b
+                                      :c ?c})})
 
 (deftest eval-node
   (testing "eval"
@@ -27,3 +33,9 @@
                                                                       (+ x y))))
                                             {:x 2
                                              :y 3})))))
+
+(deftest missing-key-test
+  (testing "a"
+    (is (thrown-match? clojure.lang.ExceptionInfo
+                       {:key :a}
+                       (lazy/eval-key env-with-missing-key :c)))))
