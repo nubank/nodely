@@ -5,8 +5,8 @@
    [clojure.test :refer :all]
    [matcher-combinators.test :refer [match?]]
    [nodely.data :as data]
-   [nodely.syntax :refer [>leaf]]
-   [nodely.engine.lazy :as lazy]))
+   [nodely.engine.lazy :as lazy]
+   [nodely.syntax :refer [>leaf]]))
 
 (def env-with-missing-key {:b (>leaf (* ?a 2))
                            :c (>leaf (* ?a 3))
