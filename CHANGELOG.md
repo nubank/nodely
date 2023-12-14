@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- Better error message for sync lazy engine when env is missing a key
+
 ## 1.14.1 / 2023-12-05
 - Fix bug that allowed a leaf body to be run multiple times in engines which used the lazy environment.
 
