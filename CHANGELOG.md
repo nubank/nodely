@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- Better error message for sync lazy engine when env is missing a key
+
 ## 1.15.0 / 2023-12-07
 - Allow running the lazy synchronous engine with a channel return.
 
