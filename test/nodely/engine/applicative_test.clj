@@ -325,7 +325,7 @@
   (testing "eval promise"
     (is (match? 3 (applicative/eval-key test-env :c {::applicative/context core-async/context}))))
   (testing "async works"
-    (let [[time-ns result] (criterium/time-body (applicative/eval-key test-env+delay-async
+    (let [[time-ns result] (criterium/time-body (applicative/eval-key test-env+delay-core-async
                                                                       :d
                                                                       {::applicative/context manifold/context}))]
       (is (match? {:a 3 :b 6 :c 9} result))
