@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+- Better error message for sync lazy engine when env is missing a key
+
+## 1.15.0 / 2023-12-07
+- Allow running the lazy synchronous engine with a channel return.
+
+## 1.14.1 / 2023-12-05
+- Fix bug that allowed a leaf body to be run multiple times in engines which used the lazy environment.
+
+## 1.14.0 / 2023-11-30
+- Fix bug preventing nil values to the passed through channels on core-async applicative engine
+- Create a blocking tag that allows leafs and sequences to be tagged with blocking to signal that they contain a blocking IO or other expensive blocking op. Engines can choose to optimize runs with this info
+- Core Async Lazy Scheduler and Core-Async Applicative support for blocking tags. Leafs with blocking tags will be dispatched through the dynamic thread pool instead of the fixed core-async worker pool
+- Add eval-key-contextual function to applicative engine for eval-node-channel evaluation. Enable returning a core.async channel to e.g. Pedestal from the applicative engine.
+- Add applicative.core-async as engine to api v0
+- Rename async.applicative to applicative.promesa
+
 ## 1.13.0 / 2023-09-12
 - Add checked-env function for cycle detection in env
 - Added applicative synchronous engine (:async.applicative)

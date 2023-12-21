@@ -1,4 +1,4 @@
-(defproject dev.nu/nodely "1.13.0"
+(defproject dev.nu/nodely "1.15.0"
   :description "Decoupling data fetching from data dependency declaration"
   :url "https://github.com/nubank/nodely"
   :license {:name "MIT"}

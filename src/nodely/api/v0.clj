@@ -3,6 +3,8 @@
   (:require
    [nodely.data]
    [nodely.engine.applicative :as applicative]
+   [nodely.engine.applicative.core-async :as applicative.core-async]
+   [nodely.engine.applicative.promesa :as applicative.promesa]
    [nodely.engine.core :as engine-core]
    [nodely.engine.core-async.core]
    [nodely.engine.core-async.iterative-scheduling :as iterative-scheduling]
@@ -19,6 +21,7 @@
              nodely.syntax/>or
              nodely.syntax/>value
              nodely.syntax/>sequence
+             nodely.syntax/blocking
              nodely.engine.core-async.core/>channel-leaf
              nodely.data/value
              nodely.data/leaf
@@ -40,7 +43,8 @@
      :core-async.lazy-scheduling      (lazy-scheduling/eval env k opts)
      :core-async.iterative-scheduling (iterative-scheduling/eval env k opts)
      :async.manifold                  (nodely.engine.manifold/eval env k)
-     :async.applicative               (nodely.engine.applicative/eval env k opts)
+     :applicative.promesa             (nodely.engine.applicative/eval env k (assoc opts ::applicative/context applicative.promesa/context))
+     :applicative.core-async          (nodely.engine.applicative/eval env k (assoc opts ::applicative/context applicative.core-async/context))
      :sync.lazy                       (nodely.engine.lazy/eval env k))))
 
 (defn eval-key
@@ -53,7 +57,8 @@
      :core-async.lazy-scheduling      (lazy-scheduling/eval-key env k opts)
      :core-async.iterative-scheduling (iterative-scheduling/eval-key env k opts)
      :async.manifold                  (nodely.engine.manifold/eval-key env k)
-     :async.applicative               (nodely.engine.applicative/eval-key env k)
+     :applicative.promesa             (nodely.engine.applicative/eval-key env k (assoc opts ::applicative/context applicative.promesa/context))
+     :applicative.core-async          (nodely.engine.applicative/eval-key env k (assoc opts ::applicative/context applicative.core-async/context))
      :sync.lazy                       (nodely.engine.lazy/eval-key env k))))
 
 (defn eval-key-channel
@@ -63,7 +68,9 @@
            :or    {engine :core-async.lazy-scheduling}
            :as    opts}]
    (case engine
-     :core-async.lazy-scheduling (lazy-scheduling/eval-key-channel env k opts))))
+     :sync.lazy                  (nodely.engine.lazy/eval-key-channel env k)
+     :core-async.lazy-scheduling (lazy-scheduling/eval-key-channel env k opts)
+     :applicative.core-async     (nodely.engine.applicative/eval-key-contextual env k (assoc opts ::applicative/context applicative.core-async/context)))))
 
 (defn eval-node
   ([env node]

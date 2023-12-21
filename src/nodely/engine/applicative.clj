@@ -3,12 +3,11 @@
   (:require
    [cats.context :as context]
    [cats.core :as m]
-   [clojure.core.async :as async]
    [clojure.pprint :as pp]
    [nodely.data :as data]
    [nodely.engine.applicative.promesa :as promesa]
+   [nodely.engine.applicative.protocols :as protocols]
    [nodely.engine.core :as core]
-   [nodely.engine.core-async.core :as core-async.core]
    [nodely.engine.lazy-env :as lazy-env]))
 
 (prefer-method pp/simple-dispatch clojure.lang.IPersistentMap clojure.lang.IDeref)
@@ -44,18 +43,6 @@
                     (eval-node falsey lazy-env opts))]
           result))
 
-(defn- apply-f
-  [context f deps-keys deps]
-  (let [in     (core/prepare-inputs deps-keys (zipmap deps-keys deps))
-        result (if (instance? nodely.engine.core_async.core.AsyncThunk f)
-                 (let [exception-ch (async/promise-chan)
-                       result-ch    (m/fmap ::data/value (core-async.core/evaluation-channel f in {:exception-ch exception-ch}))]
-                   (async/merge [exception-ch result-ch]))
-                 (f in))]
-    (if (in-context? result context)
-      (m/fmap data/value result)
-      (m/pure context (data/value result)))))
-
 (defn noop-validate
   [return _]
   return)
@@ -63,10 +50,14 @@
 (defn eval-leaf
   [leaf lazy-env {::keys [context]}]
   (let [deps-keys (seq (::data/inputs leaf))
-        f         (::data/fn leaf)]
-    (m/alet [deps (sequence (mapv #(get lazy-env %) deps-keys))
-             result (apply-f context f deps-keys deps)]
-            result)))
+        tags      (::data/tags leaf)
+        f         (with-meta (::data/fn leaf)
+                    {::data/tags tags})]
+    (m/mlet [v (protocols/apply-fn f (m/fmap #(core/prepare-inputs deps-keys (zipmap deps-keys %))
+                                             (sequence (mapv #(get lazy-env %) deps-keys))))]
+            (if (in-context? v context)
+              (m/fmap data/value v)
+              (m/pure context (data/value v))))))
 
 (defn eval-node
   [node lazy-env opts]
@@ -91,6 +82,14 @@
    (let [opts (merge {::context promesa/context} opts)
          lazy-env (lazy-env/lazy-env env eval-in-context opts)]
      (::data/value (m/extract (get lazy-env k))))))
+
+(defn eval-key-contextual
+  ([env k]
+   (eval-key env k {}))
+  ([env k opts]
+   (let [opts (merge {::context promesa/context} opts)
+         lazy-env (lazy-env/lazy-env env eval-in-context opts)]
+     (m/fmap ::data/value (get lazy-env k)))))
 
 (defn eval
   ([env k]

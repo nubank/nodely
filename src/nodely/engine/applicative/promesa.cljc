@@ -1,6 +1,7 @@
 (ns nodely.engine.applicative.promesa
   (:require
    [cats.protocols :as mp]
+   [nodely.engine.applicative.protocols :as protocols]
    [promesa.core :as p]
    [promesa.protocols :as pp]
    #?(:cljs [promesa.impl :as pi]))
@@ -37,6 +38,9 @@
 (def ^:no-doc context
   (reify
     mp/Context
+    protocols/RunNode
+    (-apply-fn  [_ f mv]
+      (pp/-map mv f))
     mp/Functor
     (-fmap [mn f mv]
       (pp/-map mv f))

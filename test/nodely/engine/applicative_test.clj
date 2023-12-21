@@ -2,17 +2,21 @@
   (:require
    [clojure.core.async :as async]
    [clojure.test :refer :all]
+   [clojure.test.check.clojure-test :refer [defspec]]
+   [clojure.test.check.properties :as prop]
    [criterium.core :as criterium]
    [matcher-combinators.matchers :as matchers]
    [matcher-combinators.test :refer [match?]]
    [nodely.data :as data]
    [nodely.engine.applicative :as applicative]
    [nodely.engine.applicative.core-async :as core-async]
+   [nodely.engine.applicative.promesa :as promesa]
    [nodely.engine.applicative.manifold :as manifold]
    [nodely.engine.applicative.synchronous :as synchronous]
    [nodely.engine.core :as core]
    [nodely.engine.core-async.core :as nodely.async]
    [nodely.engine.schema :as schema]
+   [nodely.fixtures :as fixtures]
    [nodely.syntax :as syntax :refer [>leaf >value]]
    [nodely.syntax.schema :refer [yielding-schema]]
    [promesa.core :as p]
@@ -29,14 +33,14 @@
                                 :b ?b
                                 :c ?c})})
 
-(def test-env+delay-async {:a (>leaf (+ 1 2))
-                           :b (>leaf (do (Thread/sleep 1000)
-                                         (* ?a 2)))
-                           :c (>leaf (do (Thread/sleep 1000)
-                                         (* ?a 3)))
-                           :d (>leaf {:a ?a
-                                      :b ?b
-                                      :c ?c})})
+(def test-env+delay-core-async {:a (>leaf (+ 1 2))
+                                :b (>leaf (do (Thread/sleep 1000)
+                                              (* ?a 2)))
+                                :c (>leaf (do (Thread/sleep 1000)
+                                              (* ?a 3)))
+                                :d (>leaf {:a ?a
+                                           :b ?b
+                                           :c ?c})})
 
 (def tricky-example {:x (data/value 1)
                      :y (data/value 2)
@@ -50,6 +54,23 @@
                                      (>leaf ?b)
                                      (>leaf ?c))
                      :z (>leaf ?w)})
+
+(def env-with-blocking-tag {:a (>leaf (Thread/currentThread))
+                            :b (syntax/blocking (>leaf (Thread/currentThread)))
+                            :a-name (>leaf (.getName ?a))
+                            :b-name (>leaf (.getName ?b))
+                            :c (>leaf (str ?a-name " " ?b-name))})
+
+(def env-with-nine-sleeps {:a (syntax/blocking (>leaf (do (Thread/sleep 1000) :a)))
+                           :b (syntax/blocking (>leaf (do (Thread/sleep 1000) :b)))
+                           :c (syntax/blocking (>leaf (do (Thread/sleep 1000) :c)))
+                           :d (syntax/blocking (>leaf (do (Thread/sleep 1000) :d)))
+                           :e (syntax/blocking (>leaf (do (Thread/sleep 1000) :e)))
+                           :f (syntax/blocking (>leaf (do (Thread/sleep 1000) :f)))
+                           :g (syntax/blocking (>leaf (do (Thread/sleep 1000) :g)))
+                           :h (syntax/blocking (>leaf (do (Thread/sleep 1000) :h)))
+                           :i (syntax/blocking (>leaf (do (Thread/sleep 1000) :i)))
+                           :z (>leaf (into #{} [?a ?b ?c ?d ?e ?f ?g ?h ?i]))})
 
 (def env-with-sequence {:a (>leaf [1 2 3])
                         :b (syntax/>sequence inc ?a)})
@@ -81,6 +102,23 @@
                            (async/go (+ ?a 5)))
                        :c (>leaf (+ ?a ?b))})
 
+(def interesting-example {:x (data/value 22)
+                          :y (data/value 13)
+                          :w (data/value 1)
+                          :z (data/branch (>leaf (even? ?w))
+                                          (>leaf (inc ?x))
+                                          (>leaf (inc ?y)))})
+
+(def env+exception {:a (>value 1)
+                    :b (>leaf (throw (ex-info "Oops" {:some-data "data"})))
+                    :c (>leaf (+ ?a ?b))})
+
+(def env+channel-throw {:a (>value 1)
+                        :b (nodely.async/>channel-leaf
+                            (async/go (throw (ex-info "Exception in Channel"
+                                                      {:data "data"}))))
+                        :c (>leaf (+ ?a ?b))})
+
 (deftest eval-key-test
   (testing "eval promise"
     (is (match? 3 (applicative/eval-key test-env :c))))
@@ -90,6 +128,19 @@
       (is (match? (matchers/within-delta 100000000 1000000000) time-ns))))
   (testing "tricky example"
     (is (match? 4 (applicative/eval-key tricky-example :z)))))
+
+(deftest eval-key-test-core-async
+  (testing "eval promise"
+    (is (match? 3 (applicative/eval-key test-env :c {::applicative/context core-async/context}))))
+  (testing "async works"
+    (let [[time-ns result] (criterium/time-body (applicative/eval-key test-env+delay-core-async
+                                                                      :d
+                                                                      {::applicative/context core-async/context}))]
+      (is (match? {:a 3 :b 6 :c 9} result))
+      (is (match? (matchers/within-delta 100000000 1000000000) time-ns))))
+  (testing "tricky example"
+    (is (match? 4 (applicative/eval-key tricky-example :z
+                                        {::applicative/context core-async/context})))))
 
 (deftest eval-test
   (testing "eval promise"
@@ -186,13 +237,67 @@
                           :value  3}
                          (ex-data
                           (s/with-fn-validation
-                            (applicative/eval-key env-with-failing-schema :c {::applicative/fvalidate schema/fvalidate
-                                                                              ::applicative/context core-async/context}))))))
+                            (applicative/eval-key env-with-failing-schema :c
+                                                  {::applicative/fvalidate schema/fvalidate
+                                                   ::applicative/context core-async/context}))))))
     (testing "async response is equal to sync response with async user channels"
       (is (= 7 (applicative/eval-key env+go-block :c {::applicative/context core-async/context}))))
     (testing "channel-leaf"
       (is (= 7 (applicative/eval-key env+channel-leaf :c {::applicative/context core-async/context}))))))
 
+(deftest core-async-blocking-eval-test
+  (testing "eval of a blocking tagged node will happen in the `async-thread-macro` worker pool"
+    (is (match? #"async-thread-macro-\d+"
+                (applicative/eval-key env-with-blocking-tag :b-name {::applicative/context core-async/context})))
+    (is (match? #"async-dispatch-\d+"
+                (applicative/eval-key env-with-blocking-tag :a-name {::applicative/context core-async/context})))))
+
+(deftest thread-sleeping-test-proves-thread-works-how-we-expect
+  (testing "actually only 8 threads in the async dispatch worker pool"
+    (is (match? 8
+                @@#'clojure.core.async.impl.exec.threadpool/pool-size)))
+  (testing "when we have 9 1-second blocking nodes in one environment, it can run in fewer than 2 seconds"
+    (testing "async version runs parallel when option is neglected"
+      (let [[nanosec-async _] (criterium/time-body (applicative/eval-key env-with-nine-sleeps :z {::applicative/context core-async/context}))]
+        (is (match? (matchers/within-delta 1000000000 1000000000)
+                    nanosec-async))))))
+
+(defspec does-not-blow-up-spec
+  (prop/for-all [env (fixtures/env-gen {})]
+                (applicative/eval-key env
+                                      (rand-nth (keys env))
+                                      {::applicative/context core-async/context})
+                true))
+
+(deftest eval-key-contextual-test
+  (testing "eval node async for interesting example"
+    (is (match? 14
+                (async/<!! (applicative/eval-key-contextual interesting-example :z {::applicative/context core-async/context})))))
+  (testing "trivial example"
+    (is (match? false
+                (async/<!! (applicative/eval-key-contextual {:a (data/value false)} :a {::applicative/context core-async/context})))))
+  (testing "tricky example"
+    (is (match? 4
+                (async/<!! (applicative/eval-key-contextual tricky-example :z {::applicative/context core-async/context})))))
+  (testing "env with exception"
+    (is (match? {:some-data "data"}
+                (ex-data (async/<!! (applicative/eval-key-contextual env+exception :c {::applicative/context core-async/context}))))))
+  (testing "env with channel leaf throwing"
+    (is (match?
+         {:channel any?}
+         (ex-data (async/<!! (applicative/eval-key-contextual env+channel-throw :c {::applicative/context core-async/context}))))))
+  (testing "returns CompletableFuture when context is promesa"
+    (is (match?
+         java.util.concurrent.CompletableFuture
+         (type (applicative/eval-key-contextual env+exception :c {::applicative/context promesa/context}))))))
+
+(deftest eval-key-contextual-return-type-test
+  (are [context expected-type]
+       (= expected-type
+          (type (applicative/eval-key-contextual {:a (data/value 1)} :a {::applicative/context context})))
+    promesa/context     java.util.concurrent.CompletableFuture
+    core-async/context  clojure.core.async.impl.channels.ManyToManyChannel
+    synchronous/context nodely.engine.applicative.synchronous.Box))
 (deftest manifold-applicative-test
   (let [simple-env {:a (>value 2)
                     :b (>value 1)

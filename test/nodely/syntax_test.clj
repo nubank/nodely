@@ -5,7 +5,7 @@
    [matcher-combinators.test :refer [match?]]
    [nodely.data :as data]
    [nodely.engine.core :as core]
-   [nodely.syntax :as syntax :refer [>cond >if >leaf >sequence >value]]))
+   [nodely.syntax :as syntax :refer [>cond >if >leaf >sequence >value blocking]]))
 
 (def data-node (data/value 42))
 
@@ -202,3 +202,8 @@
   (testing "builds a value"
     (is (match? #::data{:type :value :value 1}
                 (>value 1)))))
+
+(deftest blocking-builds-blocking-nodes
+  (testing "Flags a node with the blocking tag"
+    (is (match? #::data{:type :leaf :inputs #{:x :y} :fn ifn? :tags #{::data/blocking}}
+                (blocking (>leaf (+ ?x ?y)))))))

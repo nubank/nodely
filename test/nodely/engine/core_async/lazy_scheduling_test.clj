@@ -14,7 +14,7 @@
    [nodely.engine.core-async.lazy-scheduling :as nasync]
    [nodely.engine.lazy :as engine.lazy]
    [nodely.fixtures :as fixtures]
-   [nodely.syntax :as syntax :refer [>cond >leaf >value]]))
+   [nodely.syntax :as syntax :refer [>cond >leaf >value blocking]]))
 
 (def test-env {:a (>leaf (+ 1 2))
                :b (>leaf (* ?a 2))
@@ -88,6 +88,23 @@
                             (async/go (throw (ex-info "Exception in Channel"
                                                       {:data "data"}))))
                         :c (>leaf (+ ?a ?b))})
+
+(def env-with-blocking-tag {:a (>leaf (Thread/currentThread))
+                            :b (blocking (>leaf (Thread/currentThread)))
+                            :a-name (>leaf (.getName ?a))
+                            :b-name (>leaf (.getName ?b))
+                            :c (>leaf (str ?a-name " " ?b-name))})
+
+(def env-with-nine-sleeps {:a (blocking (>leaf (do (Thread/sleep 1000) :a)))
+                           :b (blocking (>leaf (do (Thread/sleep 1000) :b)))
+                           :c (blocking (>leaf (do (Thread/sleep 1000) :c)))
+                           :d (blocking (>leaf (do (Thread/sleep 1000) :d)))
+                           :e (blocking (>leaf (do (Thread/sleep 1000) :e)))
+                           :f (blocking (>leaf (do (Thread/sleep 1000) :f)))
+                           :g (blocking (>leaf (do (Thread/sleep 1000) :g)))
+                           :h (blocking (>leaf (do (Thread/sleep 1000) :h)))
+                           :i (blocking (>leaf (do (Thread/sleep 1000) :i)))
+                           :z (>leaf (into #{} [?a ?b ?c ?d ?e ?f ?g ?h ?i]))})
 
 (deftest eval-env
   (testing "async response is equal to sync response"
@@ -180,3 +197,20 @@
   (prop/for-all [env (fixtures/env-gen {})]
                 (nasync/eval-key env (rand-nth (keys env)))
                 true))
+
+(deftest blocking-eval-test
+  (testing "eval of a blocking tagged node will happen in the `async-thread-macro` worker pool"
+    (is (match? #"async-thread-macro-\d+"
+                (nasync/eval-key env-with-blocking-tag :b-name)))
+    (is (match? #"async-dispatch-\d+"
+                (nasync/eval-key env-with-blocking-tag :a-name)))))
+
+(deftest thread-sleeping-test-proves-thread-works-how-we-expect
+  (testing "actually only 8 threads in the async dispatch worker pool"
+    (is (match? 8
+                @@#'clojure.core.async.impl.exec.threadpool/pool-size)))
+  (testing "when we have 9 1-second blocking nodes in one environment, it can run in fewer than 2 seconds"
+    (testing "async version runs parallel when option is neglected"
+      (let [[nanosec-async _] (time-body (nasync/eval-key env-with-nine-sleeps :z))]
+        (is (match? (matchers/within-delta 1000000000 1000000000)
+                    nanosec-async))))))
