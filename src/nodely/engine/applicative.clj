@@ -25,23 +25,26 @@
 (declare eval-node)
 
 (defn applicative-sequence-fn
-  ;; monadic context of node
-  ;; map of keyword -> monadic context of lazy-env
-
-  ;; monadic context of a function of one argument out
   [node lazy-env]
-  (m/pure (or (::data/fn node)
-              ((::data/fn-fn node)
-               (into {} (map (juxt identity (comp ::data/value m/extract (partial get lazy-env))) (::data/closure-inputs node)))))))
+  (or (when-let [f (::data/fn node)]
+        (m/pure f))
+      (let [ks (::data/closure-inputs node)]
+        (m/fmap #((::data/fn-fn node) (zipmap ks (map ::data/value %)))
+                (m/sequence (map (partial get lazy-env) ks))))))
 
 (defn eval-sequence
   [node lazy-env opts]
-  (let [in-key (::data/input node)]
-    (m/alet [f         (applicative-sequence-fn node lazy-env) ;;(m/pure (core/sequence-fn node lazy-env))
-             input-seq (get lazy-env in-key)
-             result    (sequence (map (fn [x] (m/fmap f (m/pure x)))
-                                      (::data/value input-seq)))]
-            (data/value result))))
+  (let [in-key (::data/input node)
+        mf     (applicative-sequence-fn node lazy-env)
+        mseq   (get lazy-env in-key)]
+    (->> mseq
+         (m/fmap (comp m/sequence
+                       (partial map
+                                (comp (partial m/fapply mf)
+                                      m/pure))
+                       ::data/value))
+         m/join
+         (m/fmap data/value))))
 
 (defn eval-branch
   [{::data/keys [condition truthy falsey]}
