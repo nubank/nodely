@@ -24,15 +24,12 @@
                         :truthy    (s/recursive #'Node)
                         :falsey    (s/recursive #'Node)})
 
-(s/defschema Sequence (s/either #::{:type  (s/eq :sequence)
-                                    :input s/Keyword
-                                    :fn    (s/pred ifn?)
-                                    :tags  #{node-tag}}
-                                #::{:type           (s/eq :sequence)
-                                    :input          s/Keyword
-                                    :closure-inputs [s/Keyword]
-                                    :fn-fn          (s/pred ifn?)
-                                    :tags  #{node-tag}}))
+(s/defschema Sequence #::{:type  (s/eq :sequence)
+                          :input s/Keyword
+                          :fn    (s/conditional
+                                  #(= (get % ::type) :leaf) Leaf
+                                  ifn? (s/pred ifn?))
+                          :tags  #{node-tag}})
 
 (s/defschema Node (s/conditional
                    #(= (get % ::type) :value) Value
@@ -89,8 +86,7 @@
     tags :- #{node-tag}]
    #::{:type           :sequence
        :input          input
-       :closure-inputs closure-inputs
-       :fn-fn          f
+       :fn             (leaf closure-inputs f)
        :tags           tags}))
 
 ;;
@@ -103,6 +99,10 @@
 (defn value?
   [node]
   (= :value (::type node)))
+
+(defn leaf?
+  [node]
+  (= :leaf (::type node)))
 
 (defn node-inputs
   [node]

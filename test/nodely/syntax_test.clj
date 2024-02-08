@@ -164,7 +164,7 @@
                       :fn     fn?}
           :b #::data {:type  :sequence
                       :input :a
-                      :fn-fn fn?}}
+                      :fn fn?}}
          {:a (>leaf [1 2 3])
           :b (>sequence inc ?a)}))))
 

@@ -41,7 +41,9 @@
         closure-inputs (mapv question-mark->keyword symbols-to-be-replaced)
         fn-fn (fn-with-arg-map symbols-to-be-replaced f)]
     (assert-not-shadowing! symbols-to-be-replaced)
-    `(data/sequence ~(question-mark->keyword input) ~closure-inputs ~fn-fn #{})))
+    (if (seq symbols-to-be-replaced)
+      `(data/sequence ~(question-mark->keyword input) ~closure-inputs ~fn-fn #{})
+      `(data/sequence ~(question-mark->keyword input) ~f #{}))))
 
 (defmacro >leaf
   [expr]

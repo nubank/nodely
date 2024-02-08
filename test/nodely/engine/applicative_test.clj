@@ -76,7 +76,7 @@
 
 (def env-with-closure-sequence {:x (data/value [1 2 3])
                                 :z (data/value 2)
-                                :y (>sequence (fn [e] (* e ?z)) ?x)})
+                                :y (>sequence #(* % ?z) ?x)})
 
 (def env+sequence-with-nil-values
   {:a (>leaf [1 2 nil 4])

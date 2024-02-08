@@ -59,9 +59,9 @@
 (def env-with-sequence {:a (>leaf [1 2 3])
                         :b (>sequence inc ?a)})
 
-(def env-with-closure-sequence {:a (>leaf [1 2 3])
+(def env-with-closure-sequence {:a (>value [1 2 3])
                                 :c (>value 2)
-                                :b (>sequence #(* % ?c) ?a)})
+                                :b (>sequence (fn [e] (* e ?c)) ?a)})
 
 (def env+sequence-with-nil-values
   {:a (>leaf [1 2 nil 4])
@@ -146,9 +146,9 @@
       (is (match? (matchers/within-delta 8000000 2000000000)
                   (- nanosec-sync nanosec-async)))))
   (testing "Actually computes the correct answers"
-    (is (= [2 3 4] (nasync/eval-key env-with-sequence+delay :b))))
+    (is (match? [2 3 4] (nasync/eval-key env-with-sequence+delay :b))))
   (testing "When there's a closure in the sequence expr"
-    (is (= [2 4 6] (nasync/eval-key env-with-closure-sequence :b)))))
+    (is (match? [2 4 6] (nasync/eval-key env-with-closure-sequence :b)))))
 
 (deftest eval-test
   (testing "eval node async"

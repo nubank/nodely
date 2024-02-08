@@ -25,17 +25,16 @@
 (declare eval-node)
 
 (defn applicative-sequence-fn
-  [node lazy-env]
-  (or (when-let [f (::data/fn node)]
-        (m/pure f))
-      (let [ks (::data/closure-inputs node)]
-        (m/fmap #((::data/fn-fn node) (zipmap ks (map ::data/value %)))
-                (m/sequence (map (partial get lazy-env) ks))))))
+  [node lazy-env opts]
+  (let [f (::data/fn node)]
+    (if (data/leaf? f)
+      (m/fmap ::data/value (eval-node f lazy-env opts))
+      (m/pure f))))
 
 (defn eval-sequence
   [node lazy-env opts]
   (let [in-key (::data/input node)
-        mf     (applicative-sequence-fn node lazy-env)
+        mf     (applicative-sequence-fn node lazy-env opts)
         mseq   (get lazy-env in-key)]
     (->> mseq
          (m/fmap (comp m/sequence

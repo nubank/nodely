@@ -125,10 +125,10 @@
 
 (defn sequence-fn
   ([node env]
-   (sequence-fn prepare-inputs node env))
-  ([inputs-fn node env]
-   (or (::data/fn node)
-       ((::data/fn-fn node) (inputs-fn (::data/closure-inputs node) env)))))
+   (let [f (::data/fn node)]
+     (if (data/leaf? f)
+       (::data/value (first (leaf->value f env)))
+       f))))
 
 (defn- sequence->value
   [node env]

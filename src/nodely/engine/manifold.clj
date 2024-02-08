@@ -17,10 +17,17 @@
   (let [in (prepare-inputs (::data/inputs node) future-env)]
     (core/eval-leaf node in)))
 
+(defn sequence-fn
+  [node future-env]
+  (let [f (::data/fn node)]
+    (if (data/leaf? f)
+      (::data/value (eval-leaf f future-env))
+      f)))
+
 (defn eval-sequence
   [node future-env]
   (let [in-key (::data/input node)
-        f      (core/sequence-fn prepare-inputs node future-env)
+        f      (sequence-fn node future-env)
         in     (prepare-inputs [in-key] future-env)]
     (data/value (->> (get in in-key)
                      (mapv #(deferred/future (f %)))
