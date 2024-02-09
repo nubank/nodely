@@ -123,17 +123,10 @@
   [k env]
   (resolve k (resolve-one-branch k env)))
 
-(defn sequence-fn
-  ([node env]
-   (let [f (::data/fn node)]
-     (if (data/leaf? f)
-       (::data/value (first (leaf->value f env)))
-       f))))
-
 (defn- sequence->value
   [node env]
   (let [in-key  (::data/input node)
-        f       (sequence-fn node env)
+        f       (::data/value (first (node->value (::data/process-node node) env)))
         new-env (resolve-inputs [in-key] env)
         in      (data/get-value new-env in-key)]
     [(data/value (mapv f in)) new-env]))
