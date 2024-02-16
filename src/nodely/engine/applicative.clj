@@ -26,12 +26,18 @@
 
 (defn eval-sequence
   [node lazy-env opts]
-  (let [f  (::data/fn node)
-        in-key (::data/input node)]
-    (m/alet [input-seq (get lazy-env in-key)
-             result (sequence (map (fn [x] (m/fmap f (m/pure x)))
-                                   (::data/value input-seq)))]
-            (data/value result))))
+  (let [in-key (::data/input node)
+        mf     (m/fmap ::data/value
+                       (eval-node (::data/process-node node) lazy-env opts))
+        mseq   (get lazy-env in-key)]
+    (->> mseq
+         (m/fmap (comp m/sequence
+                       (partial map
+                                (comp (partial m/fapply mf)
+                                      m/pure))
+                       ::data/value))
+         m/join
+         (m/fmap data/value))))
 
 (defn eval-branch
   [{::data/keys [condition truthy falsey]}

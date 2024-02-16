@@ -16,7 +16,7 @@
    [nodely.engine.core-async.core :as nodely.async]
    [nodely.engine.schema :as schema]
    [nodely.fixtures :as fixtures]
-   [nodely.syntax :as syntax :refer [>leaf >value]]
+   [nodely.syntax :as syntax :refer [>leaf >sequence >value]]
    [nodely.syntax.schema :refer [yielding-schema]]
    [promesa.core :as p]
    [schema.core :as s]))
@@ -73,6 +73,10 @@
 
 (def env-with-sequence {:a (>leaf [1 2 3])
                         :b (syntax/>sequence inc ?a)})
+
+(def env-with-closure-sequence {:x (data/value [1 2 3])
+                                :z (data/value 2)
+                                :y (>sequence #(* % ?z) ?x)})
 
 (def env+sequence-with-nil-values
   {:a (>leaf [1 2 nil 4])
@@ -175,7 +179,10 @@
       (is (match? (matchers/within-delta 8000000 2000000000)
                   (- nanosec-sync nanosec-async)))))
   (testing "Actually computes the correct answers"
-    (is (match? [2 3 4] (applicative/eval-key env-with-sequence+delay :c)))))
+    (is (match? [2 3 4] (applicative/eval-key env-with-sequence+delay :c))))
+  (testing "resolve closure sequence"
+    (is (= [2 4 6]
+           (applicative/eval-key env-with-closure-sequence :y)))))
 
 (deftest schema-test
   (let [env-with-schema         {:a (>value 2)

@@ -6,6 +6,8 @@
    [nodely.data :as data]
    [nodely.engine.core :as core]))
 
+(declare eval-async)
+
 (defn- prepare-inputs
   [input-keys future-env]
   (->> (select-keys future-env input-keys)
@@ -20,7 +22,7 @@
 (defn eval-sequence
   [node future-env]
   (let [in-key (::data/input node)
-        f      (::data/fn node)
+        f      (::data/value (eval-async (::data/process-node node) future-env))
         in     (prepare-inputs [in-key] future-env)]
     (data/value (->> (get in in-key)
                      (mapv #(deferred/future (f %)))
