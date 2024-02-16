@@ -27,7 +27,9 @@
 
 (s/defschema Sequence #::{:type         (s/eq :sequence)
                           :input        s/Keyword
-                          :process-node (s/recursive #'Node)
+                          :process-node (s/conditional
+                                         #(= (get % ::type) :value) Value
+                                         #(= (get % ::type) :leaf) Leaf)
                           :tags         #{node-tag}})
 
 (s/defschema Node (s/conditional
