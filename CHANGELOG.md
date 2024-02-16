@@ -1,7 +1,7 @@
 # Changelog
 
-## Unreleased
-- Better error message for sync lazy engine when env is missing a key
+## 1.16.0 / 2024-02-16
+- Allow sequences to refer to any node in the environment for the mapped fn
 
 ## 1.15.0 / 2023-12-07
 - Allow running the lazy synchronous engine with a channel return.
