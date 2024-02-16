@@ -1,7 +1,8 @@
 (ns nodely.data
   (:refer-clojure :exclude [map sequence])
   (:require
-   [schema.core :as s]))
+   [schema.core :as s]
+   [clojure.set :as set]))
 
 ;;
 ;; Node Definitions
@@ -103,12 +104,15 @@
   (= :leaf (::type node)))
 
 (defn node-inputs
-  [node]
-  (case (::type node)
-    :value    #{}
-    :leaf     (::inputs node)
-    :branch   (recur (::condition node))
-    :sequence #{(::input node)}))
+  ([node]
+   (node-inputs node #{}))
+  ([node inputs]
+   (case (::type node)
+     :value    inputs
+     :leaf     (set/union inputs (::inputs node))
+     :branch   (recur (::condition node) inputs)
+     :sequence (recur (::process-node node)
+                      (conj inputs (::input node))))))
 
 ;;
 ;; Env Utils
