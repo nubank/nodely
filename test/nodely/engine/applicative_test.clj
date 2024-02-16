@@ -16,7 +16,7 @@
    [nodely.engine.core-async.core :as nodely.async]
    [nodely.engine.schema :as schema]
    [nodely.fixtures :as fixtures]
-   [nodely.syntax :as syntax :refer [>leaf >value >sequence]]
+   [nodely.syntax :as syntax :refer [>leaf >sequence >value]]
    [nodely.syntax.schema :refer [yielding-schema]]
    [promesa.core :as p]
    [schema.core :as s]))

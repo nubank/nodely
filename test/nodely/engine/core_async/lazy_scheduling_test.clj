@@ -14,7 +14,7 @@
    [nodely.engine.core-async.lazy-scheduling :as nasync]
    [nodely.engine.lazy :as engine.lazy]
    [nodely.fixtures :as fixtures]
-   [nodely.syntax :as syntax :refer [>cond >leaf >value >sequence blocking]]))
+   [nodely.syntax :as syntax :refer [>cond >leaf >sequence >value blocking]]))
 
 (def test-env {:a (>leaf (+ 1 2))
                :b (>leaf (* ?a 2))
