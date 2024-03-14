@@ -33,19 +33,40 @@
 (import-fn nodely.data/merge-values merge-values)
 (import-fn nodely.data/get-value get-value)
 
+(def engine-data
+  {:core-async.lazy-scheduling      {::ns (find-ns 'nodely.engine.core-async.lazy-scheduling)
+                                     ::opts-fn identity
+                                     ::eval-key-channel true}
+   :core-async.iterative-scheduling {::ns (find-ns 'nodely.engine.core-async.iterative-scheduling)
+                                     ::opts-fn identity}
+   :async.manifold                  {::ns (find-ns 'nodely.engine.manifold)
+                                     ::opts-fn (constantly nil)}
+   :applicative.promesa             {::ns (find-ns 'nodely.engine.applicative)
+                                     ::opts-fn #(assoc % ::applicative/context applicative.promesa/context)}
+   :applicative.core-async          {::ns (find-ns 'nodely.engine.applicative)
+                                     ::opts-fn #(assoc % ::applicative/context applicative.core-async/context)
+                                     ::eval-key-channel true}
+   :sync.lazy                       {::ns (find-ns 'nodely.engine.lazy)
+                                     ::opts-fn (constantly nil)
+                                     ::eval-key-channel true}})
+
+(defn- engine-fn
+  [engine-name use]
+  (ns-resolve (::ns (engine-data engine-name)) use))
+
+(def engine-fn (memoize engine-fn))
+
 (defn eval
   ([env k]
    (eval env k {}))
   ([env k {engine ::engine
            :or    {engine :core-async.lazy-scheduling}
            :as    opts}]
-   (case engine
-     :core-async.lazy-scheduling      (lazy-scheduling/eval env k opts)
-     :core-async.iterative-scheduling (iterative-scheduling/eval env k opts)
-     :async.manifold                  (nodely.engine.manifold/eval env k)
-     :applicative.promesa             (nodely.engine.applicative/eval env k (assoc opts ::applicative/context applicative.promesa/context))
-     :applicative.core-async          (nodely.engine.applicative/eval env k (assoc opts ::applicative/context applicative.core-async/context))
-     :sync.lazy                       (nodely.engine.lazy/eval env k))))
+
+   (let [efn (engine-fn engine 'eval)]
+     (if-let [opts ((::opts-fn (engine-data engine)) opts)]
+       (efn env k opts)
+       (efn env k)))))
 
 (defn eval-key
   ([env k]
@@ -53,13 +74,10 @@
   ([env k {engine ::engine
            :or    {engine :core-async.lazy-scheduling}
            :as    opts}]
-   (case engine
-     :core-async.lazy-scheduling      (lazy-scheduling/eval-key env k opts)
-     :core-async.iterative-scheduling (iterative-scheduling/eval-key env k opts)
-     :async.manifold                  (nodely.engine.manifold/eval-key env k)
-     :applicative.promesa             (nodely.engine.applicative/eval-key env k (assoc opts ::applicative/context applicative.promesa/context))
-     :applicative.core-async          (nodely.engine.applicative/eval-key env k (assoc opts ::applicative/context applicative.core-async/context))
-     :sync.lazy                       (nodely.engine.lazy/eval-key env k))))
+   (let [efn (engine-fn engine 'eval-key)]
+     (if-let [opts ((::opts-fn (engine-data engine)) opts)]
+       (efn env k opts)
+       (efn env k)))))
 
 (defn eval-key-channel
   ([env k]
@@ -67,10 +85,10 @@
   ([env k {engine ::engine
            :or    {engine :core-async.lazy-scheduling}
            :as    opts}]
-   (case engine
-     :sync.lazy                  (nodely.engine.lazy/eval-key-channel env k)
-     :core-async.lazy-scheduling (lazy-scheduling/eval-key-channel env k opts)
-     :applicative.core-async     (nodely.engine.applicative/eval-key-contextual env k (assoc opts ::applicative/context applicative.core-async/context)))))
+   (let [efn (engine-fn engine 'eval-key-channel)]
+     (if-let [opts ((::opts-fn (engine-data engine)) opts)]
+       (efn env k opts)
+       (efn env k)))))
 
 (defn eval-node
   ([env node]
