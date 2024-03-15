@@ -1,5 +1,5 @@
 (ns nodely.data
-  (:refer-clojure :exclude [map sequence])
+  (:refer-clojure :exclude [map sequence] :rename {flatten core-flatten})
   (:require
    [clojure.set :as set]
    [schema.core :as s]))
@@ -140,7 +140,7 @@
 (s/defn flatten :- [Node]
   [node :- Node]
   (case (::type node)
-    :branch (cons node (concat (flatten (::condition node)) (flatten (::truthy node)) (flatten (::falsey node))))
+    :branch (cons node (concat (core-flatten (::condition node)) (core-flatten (::truthy node)) (core-flatten (::falsey node))))
     [node]))
 
 (defn branch-count
