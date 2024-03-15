@@ -1,5 +1,5 @@
 (ns nodely.api.v0
-  (:refer-clojure :exclude [cond eval])
+  (:refer-clojure :exclude [cond eval sequence])
   (:require
    [nodely.data]
    [nodely.engine.applicative :as applicative]
