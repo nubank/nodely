@@ -71,7 +71,8 @@
       :value    (async/put! out-ch node)
       :leaf     (nodely.async/jog
                  (let [deps       (seq (::data/inputs node))
-                       deps-chans (mapv #(get lazy-env %) deps)
+                       deps-chans (nodely.async/feedback-try exception-ch
+                                                             (mapv #(core/get! lazy-env %) deps))
                        values     (zipmap deps (nodely.async/<request (async/map vector deps-chans) exception-ch))
                        in         (core/prepare-inputs (::data/inputs node) values)]
                    (async/>! out-ch
