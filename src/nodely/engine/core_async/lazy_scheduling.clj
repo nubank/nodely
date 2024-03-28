@@ -72,16 +72,17 @@
       :leaf     (nodely.async/jog
                  (let [deps       (seq (::data/inputs node))
                        deps-chans (nodely.async/feedback-try exception-ch
-                                                             (mapv #(core/get! lazy-env %) deps))
-                       values     (zipmap deps (nodely.async/<request (async/map vector deps-chans) exception-ch))
-                       in         (core/prepare-inputs (::data/inputs node) values)]
-                   (async/>! out-ch
-                             (nodely.async/<request (nodely.async/evaluation-channel
-                                                     (::data/fn node) in {:exception-ch exception-ch
-                                                                          :blocking (-> node
-                                                                                        ::data/tags
-                                                                                        ::data/blocking)})
-                                                    exception-ch))))
+                                                             (mapv #(core/get! lazy-env %) deps))]
+                   (when deps-chans
+                     (let [values (zipmap deps (nodely.async/<request (async/map vector deps-chans) exception-ch))
+                           in     (core/prepare-inputs (::data/inputs node) values)]
+                       (async/>! out-ch
+                                 (nodely.async/<request (nodely.async/evaluation-channel
+                                                          (::data/fn node) in {:exception-ch exception-ch
+                                                                               :blocking (-> node
+                                                                                             ::data/tags
+                                                                                             ::data/blocking)})
+                                                        exception-ch))))))
       :sequence (eval-sequence node lazy-env opts)
       :branch   (eval-branch node lazy-env opts)))
   out-ch)

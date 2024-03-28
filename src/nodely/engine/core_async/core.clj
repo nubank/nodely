@@ -20,7 +20,8 @@
   [ex-ch & body]
   `(try ~@body
         (catch Throwable t#
-          (async/put! ~ex-ch t#))))
+          (async/put! ~ex-ch t#)
+          nil)))
 
 (defn user-exception
   [exception]

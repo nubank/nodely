@@ -16,7 +16,8 @@
                       :or    {max-sequence-parallelism 4}}]
   (let [in-key          (::data/input node)
         f               (::data/value (first (core/node->value (::data/process-node node) resolved-env)))
-        sequence        (map data/value (get (core/prepare-inputs [in-key] resolved-env) in-key))
+        ;; todo: add sequences to the test env
+        sequence        (map data/value (core/get! (core/prepare-inputs [in-key] resolved-env) in-key))
         in-chan         (async/to-chan! sequence)
         pipeline-result (async/chan)]
     (async/pipeline max-sequence-parallelism

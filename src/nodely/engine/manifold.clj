@@ -41,7 +41,7 @@
   (let [graph      (core/env->graph env)
         top-sort   (alg/topsort graph)
         future-env (reduce (fn [acc k]
-                             (let [node (get env k)]
+                             (let [node (core/get! env k)]
                                (assoc acc k (deferred/future (eval-async node acc)))))
                            {}
                            top-sort)]
