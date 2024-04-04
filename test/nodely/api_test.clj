@@ -31,7 +31,7 @@
   (testing "evaling an env where all referred nodes exist works"
     (doseq [engine (keys api/engine-data)]
       (is (= 5 (api/eval-node env (>leaf ?z)
-                          {::api/engine engine})))))
+                              {::api/engine engine})))))
   (testing "eval-key an env where all referred nodes exist works"
     (doseq [engine (keys api/engine-data)]
       (is (= 5 (api/eval-key env :z
@@ -42,4 +42,4 @@
     (doseq [engine (keys api/engine-data)]
       (is (thrown-with-msg? clojure.lang.ExceptionInfo  #"Missing key on env"
                             (api/eval-key missing-node-env :c
-                                       {::api/engine engine}))))))
+                                          {::api/engine engine}))))))

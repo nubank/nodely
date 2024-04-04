@@ -78,10 +78,10 @@
                            in     (core/prepare-inputs (::data/inputs node) values)]
                        (async/>! out-ch
                                  (nodely.async/<request (nodely.async/evaluation-channel
-                                                          (::data/fn node) in {:exception-ch exception-ch
-                                                                               :blocking (-> node
-                                                                                             ::data/tags
-                                                                                             ::data/blocking)})
+                                                         (::data/fn node) in {:exception-ch exception-ch
+                                                                              :blocking (-> node
+                                                                                            ::data/tags
+                                                                                            ::data/blocking)})
                                                         exception-ch))))))
       :sequence (eval-sequence node lazy-env opts)
       :branch   (eval-branch node lazy-env opts)))
