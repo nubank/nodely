@@ -62,9 +62,8 @@
                             (api/eval-key sequence-node-env-with-missing-key :y {::api/engine engine}))))))
 
 (t/deftest new-eval-node-sequence
-  (concat
+  (apply concat
    (for [engine (keys api/engine-data)]
-     (do
-       (t/matching [5 3 4] (api/eval-key sequence-node-env :y {::api/engine engine}))
-       (t/matching #"Missing key on env" (try (api/eval-key sequence-node-env-with-missing-key :y {::api/engine engine})
-                                              (catch clojure.lang.ExceptionInfo e (ex-message e))))))))
+     [(t/matching [5 3 4] (api/eval-key sequence-node-env :y {::api/engine engine}))
+      (t/matching #"Missing key on env" (try (api/eval-key sequence-node-env-with-missing-key :y {::api/engine engine})
+                                             (catch clojure.lang.ExceptionInfo e (ex-message e))))])))
