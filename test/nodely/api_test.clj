@@ -3,7 +3,8 @@
   (:require
    [clojure.core.async :as async]
    [clojure.test :refer :all]
-   [nodely.api.v0 :as api :refer [>leaf >value >sequence]]))
+   [nodely.api.v0 :as api :refer [>leaf >value >sequence]]
+   [nodely.test-helpers :as t]))
 
 (def env {:x (>value 2)
           :y (>value 3)
@@ -59,3 +60,11 @@
     (doseq [engine (keys api/engine-data)]
       (is (thrown-with-msg? clojure.lang.ExceptionInfo  #"Missing key on env"
                             (api/eval-key sequence-node-env-with-missing-key :y {::api/engine engine}))))))
+
+(t/deftest new-eval-node-sequence
+  (concat
+   (for [engine (keys api/engine-data)]
+     (do
+       (t/matching [5 3 4] (api/eval-key sequence-node-env :y {::api/engine engine}))
+       (t/matching #"Missing key on env" (try (api/eval-key sequence-node-env-with-missing-key :y {::api/engine engine})
+                                              (catch clojure.lang.ExceptionInfo e (ex-message e))))))))
