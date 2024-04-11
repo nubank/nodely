@@ -1,11 +1,13 @@
 (ns nodely.test-helpers
-  (:require  [clojure.test :as t]
-             [matcher-combinators.standalone :as matcher-combinators :refer [match]]
-             [matcher-combinators.result :as result]
-             [matcher-combinators.clj-test]))
+  (:require
+   [clojure.string :as string]
+   [clojure.test :as t]
+   [matcher-combinators.clj-test]
+   [matcher-combinators.result :as result]
+   [matcher-combinators.standalone :as matcher-combinators :refer [match]]))
 
 (defn- clojure-test-report
-  [{:keys [expected actual]
+  [{:keys [expected actual description]
     result :match/result
     detail :mismatch/detail
     :as    report}]
@@ -15,7 +17,7 @@
 
     :mismatch
     {:type     :fail
-     :message  "Oops!" ;; TODO: Have better messages
+     :message  description
      :expected expected
      :actual   (matcher-combinators.clj-test/tagged-for-pretty-printing
                 (list '~'not (list 'match? expected actual))
@@ -24,22 +26,36 @@
      :line     (:line report)}))
 
 (defmacro matching
-  [expected actual]
-  `(assoc (matcher-combinators.clj-test/with-file+line-info
-            (match ~expected ~actual))
-          :expected ~expected
-          :actual ~actual))
+  ([expected actual]
+   (matching "Oops!" expected actual))
+  ([description expected actual]
+   `(assoc (matcher-combinators.clj-test/with-file+line-info
+             (match ~expected ~actual))
+           :expected ~expected
+           :actual ~actual
+           :description ~description)))
 
 (defmacro deftest
   {:doc      "Clojure.test: The good parts"
    :arglists '([name & assertions])}
-  [name assertions]
-  `(let [assertions# ~assertions]
-     (t/deftest ~name
-       (doseq [assertion-data# assertions#]
-         (t/report (#'clojure-test-report assertion-data#))))))
+  ([name assertions]
+   `(let [assertions# (flatten ~assertions)]
+      (t/deftest ~name
+        (doseq [assertion-data# assertions#]
+          (t/report (#'clojure-test-report assertion-data#))))))
+  ([name assertions & more]
+   `(deftest ~name (concat ~assertions (flatten ~more)))))
+
+(defn testing
+  [description & assertions]
+  (map (fn [assertion] (update assertion :description (partial str description " - "))) (flatten assertions)))
 
 (comment
   (deftest my-test
-    [(matching 1 2)
-     (matching 1 1)]))
+    (testing "Top layer"
+      (matching 1 2)
+      (matching 1 1))
+    (testing "My description"
+      (testing "nested description"
+        (matching "A description" 1 2)
+        (matching 1 1)))))
