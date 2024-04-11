@@ -39,7 +39,6 @@
   {:doc      "Clojure.test: The good parts"
    :arglists '([name & assertions])}
   ([name assertions]
-   #nu/tapd assertions
    `(let [assertions# ~assertions]
       (t/deftest ~name
         (doseq [assertion-data# assertions#]
