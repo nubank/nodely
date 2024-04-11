@@ -39,12 +39,13 @@
   {:doc      "Clojure.test: The good parts"
    :arglists '([name & assertions])}
   ([name assertions]
-   `(let [assertions# (flatten ~assertions)]
+   #nu/tapd assertions
+   `(let [assertions# ~assertions]
       (t/deftest ~name
         (doseq [assertion-data# assertions#]
           (t/report (#'clojure-test-report assertion-data#))))))
   ([name assertions & more]
-   `(deftest ~name (concat ~assertions (flatten ~more)))))
+   `(deftest ~name (concat ~assertions ~@more))))
 
 (defn testing
   [description & assertions]
@@ -58,4 +59,7 @@
     (testing "My description"
       (testing "nested description"
         (matching "A description" 1 2)
-        (matching 1 1)))))
+        (matching 1 1)))
+    (testing "one more layer"
+      (matching 1 2)
+      (matching 1 1))))
