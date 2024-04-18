@@ -61,9 +61,17 @@
       (is (thrown-with-msg? clojure.lang.ExceptionInfo  #"Missing key on env"
                             (api/eval-key sequence-node-env-with-missing-key :y {::api/engine engine}))))))
 
+(defn engine-test-suit
+  [engine-key]
+  (t/testing (name engine-key)
+    (t/testing "not missing sequence"
+      (t/matching [2 3 5]
+                  (api/eval-key sequence-node-env :y {::api/engine engine-key})))
+    (t/testing "sequence with missing key"
+      (t/matching #"Missing key on env"
+                  (try (api/eval-key sequence-node-env-with-missing-key :y {::api/engine engine-key})
+                       (catch clojure.lang.ExceptionInfo e (ex-message e)))))))
+
 (t/deftest new-eval-node-sequence
-  (apply concat
-   (for [engine (keys api/engine-data)]
-     [(t/matching [5 3 4] (api/eval-key sequence-node-env :y {::api/engine engine}))
-      (t/matching #"Missing key on env" (try (api/eval-key sequence-node-env-with-missing-key :y {::api/engine engine})
-                                             (catch clojure.lang.ExceptionInfo e (ex-message e))))])))
+  (for [engine (keys api/engine-data)]
+    (engine-test-suit engine)))

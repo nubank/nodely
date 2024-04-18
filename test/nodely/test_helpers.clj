@@ -27,7 +27,7 @@
 
 (defmacro matching
   ([expected actual]
-   (matching "Oops!" expected actual))
+   `(matching "" ~expected ~actual))
   ([description expected actual]
    `(assoc (matcher-combinators.clj-test/with-file+line-info
              (match ~expected ~actual))
@@ -39,10 +39,9 @@
   {:doc      "Clojure.test: The good parts"
    :arglists '([name & assertions])}
   ([name assertions]
-   `(let [assertions# ~assertions]
-      (t/deftest ~name
-        (doseq [assertion-data# assertions#]
-          (t/report (#'clojure-test-report assertion-data#))))))
+   `(t/deftest ~name
+      (doseq [assertion-data# (flatten ~assertions)]
+        (t/report (#'clojure-test-report assertion-data#)))))
   ([name assertions & more]
    `(deftest ~name (concat ~assertions ~@more))))
 
@@ -51,6 +50,10 @@
   (map (fn [assertion] (update assertion :description (partial str description " - "))) (flatten assertions)))
 
 (comment
+  (deftest my-test-2
+    (apply concat [[(matching 1 2)
+                    (matching 1 1)]
+                   [(matching 1 3)]]))
   (deftest my-test
     (testing "Top layer"
       (matching 1 2)
