@@ -21,57 +21,48 @@
 (def sequence-node-env-with-missing-key
   {:y (>sequence inc ?x)})
 
-(deftest eval-*-channel-test
-  (testing "returning a result to a channel with each engine"
-    (doseq [engine (->> api/engine-data
-                        (filter (fn [[k v]] (::api/eval-key-channel v)))
-                        (map first))]
-      (is (= 5 (async/<!! (api/eval-key-channel env :z
-                                                {::api/engine engine}))))))
-  (testing "returning a result to a channel with each engine"
-    (doseq [engine (->> api/engine-data
-                        (filter (fn [[k v]] (::api/eval-key-channel v)))
-                        (map first))]
-      (is (= 5 (async/<!! (api/eval-node-channel env (>leaf ?z)
-                                                 {::api/engine engine})))))))
+(defn channel-interface
+  [engine-key]
+  (get-in api/engine-data [engine-key ::api/eval-key-channel]))
 
-(deftest eval-works-across-all-engines
-  (testing "evaling an env where all referred nodes exist works"
-    (doseq [engine (keys api/engine-data)]
-      (is (= 5 (api/eval-node env (>leaf ?z)
-                              {::api/engine engine})))))
-  (testing "eval-key an env where all referred nodes exist works"
-    (doseq [engine (keys api/engine-data)]
-      (is (= 5 (api/eval-key env :z
-                             {::api/engine engine}))))))
-
-(deftest eval-node-missing-node-exception-test
-  (testing "evaling an env where a key is missing raises an exception that assists diagnosing the problematic environment"
-    (doseq [engine (keys api/engine-data)]
-      (is (thrown-with-msg? clojure.lang.ExceptionInfo  #"Missing key on env"
-                            (api/eval-key missing-node-env :c
-                                          {::api/engine engine}))))))
-
-(deftest eval-node-sequence
-  (testing "not missing sequence"
-    (doseq [engine (keys api/engine-data)]
-      (is (= [2 3 4] (api/eval-key sequence-node-env :y {::api/engine engine})))))
-  (testing "sequence with missing key"
-    (doseq [engine (keys api/engine-data)]
-      (is (thrown-with-msg? clojure.lang.ExceptionInfo  #"Missing key on env"
-                            (api/eval-key sequence-node-env-with-missing-key :y {::api/engine engine}))))))
-
-(defn engine-test-suit
+(defn engine-test-suite
   [engine-key]
   (t/testing (name engine-key)
-    (t/testing "not missing sequence"
-      (t/matching [2 3 5]
-                  (api/eval-key sequence-node-env :y {::api/engine engine-key})))
-    (t/testing "sequence with missing key"
-      (t/matching #"Missing key on env"
-                  (try (api/eval-key sequence-node-env-with-missing-key :y {::api/engine engine-key})
-                       (catch clojure.lang.ExceptionInfo e (ex-message e)))))))
+
+    (when (channel-interface engine-key)
+      (t/testing "eval-*-channel-test"
+        (t/testing "returning a result to a channel with each engine"
+          (t/matching 5 (async/<!! (api/eval-key-channel env :z {::api/engine engine-key}))))
+        (t/testing "returning a result to a channel with each engine"
+          (t/matching 5 (async/<!! (api/eval-node-channel env (>leaf ?z) {::api/engine engine-key}))))))
+
+    (t/testing "eval-works-across-all-engines"
+      (t/testing "evaling an env where all referred nodes exist works"
+        (t/matching 5 (api/eval-node env (>leaf ?z) {::api/engine engine-key})))
+      (t/testing "eval-key an env where all referred nodes exist works"
+        (t/matching 5 (api/eval-key env :z {::api/engine engine-key}))))
+
+    (t/testing "eval-node-missing-node-exception-test"
+      (t/testing "evaling an env where a key is missing raises an exception that assists diagnosing the problematic environment"
+        (t/matching #"Missing key on env" (try (api/eval-key missing-node-env :c {::api/engine engine-key})
+                                               (catch clojure.lang.ExceptionInfo e (ex-message e))))))
+
+    (t/testing "eval-node-sequence"
+      (t/testing "not missing sequence"
+        (t/matching [2 3 4] (api/eval-key sequence-node-env :y {::api/engine engine-key})))
+      (t/testing "sequence with missing key"
+        (t/matching #"Missing key on env" (try (api/eval-key sequence-node-env-with-missing-key :y {::api/engine engine-key})
+                                           (catch clojure.lang.ExceptionInfo e (ex-message e))))))
+
+    (t/testing "eval node sequence"
+      (t/testing "not missing sequence"
+        (t/matching [2 3 4]
+                    (api/eval-key sequence-node-env :y {::api/engine engine-key})))
+      (t/testing "sequence with missing key"
+        (t/matching #"Missing key on env"
+                    (try (api/eval-key sequence-node-env-with-missing-key :y {::api/engine engine-key})
+                         (catch clojure.lang.ExceptionInfo e (ex-message e))))))))
 
 (t/deftest new-eval-node-sequence
   (for [engine (keys api/engine-data)]
-    (engine-test-suit engine)))
+    (engine-test-suite engine)))

@@ -47,7 +47,11 @@
 
 (defn testing
   [description & assertions]
-  (map (fn [assertion] (update assertion :description (partial str description " - "))) (flatten assertions)))
+  (->> (flatten assertions)
+       (remove nil?)
+       (map (fn [assertion] (update assertion :description #(if (empty? %)
+                                                  description
+                                                  (string/join " - " [description %])))))))
 
 (comment
   (deftest my-test-2
