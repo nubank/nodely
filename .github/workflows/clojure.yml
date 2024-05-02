@@ -64,6 +64,25 @@ jobs:
     - name: Run clj tests
       run: lein test
 
+  test-using-java-21:
+    name: 'Test using Java 21'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - uses: actions/setup-java@v1
+      with:
+        java-version: 21
+
+    - name: Print java version
+      run: java -version
+
+    - name: Install dependencies
+      run: lein deps
+
+    - name: Run clj tests
+      run: lein test
+
   lint:
     name: 'Lint'
     runs-on: ubuntu-latest
