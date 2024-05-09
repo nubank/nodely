@@ -16,6 +16,13 @@
   [ex-ch & body]
   `(async/thread (try ~@body (catch Throwable t# (async/>!! ~ex-ch t#)))))
 
+(defmacro feedback-try
+  [ex-ch & body]
+  `(try ~@body
+        (catch Throwable t#
+          (async/put! ~ex-ch t#)
+          nil)))
+
 (defn user-exception
   [exception]
   (ex-info "User code exception" {:type :user-code-exception} exception))

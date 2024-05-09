@@ -97,6 +97,8 @@
          lazy-env (lazy-env/lazy-env env eval-in-context opts)]
      (m/fmap ::data/value (get lazy-env k)))))
 
+(def eval-key-channel eval-key-contextual)
+
 (defn eval
   ([env k]
    (eval env k {::context promesa/context}))
