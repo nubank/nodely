@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- Better and more consistent error messages when there is a missing key in an environment.
+
 ## 1.16.0 / 2024-02-16
 - Allow sequences to refer to any node in the environment for the mapped fn
 
