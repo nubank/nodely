@@ -50,6 +50,15 @@
                                      ::opts-fn (constantly nil)
                                      ::eval-key-channel true}})
 
+;; Java 21 Virtual Threads Support
+(try (import java.util.concurrent.ThreadPerTaskExecutor)
+     (require '[nodely.engine.virtual-workers])
+     (alter-var-root #'engine-data
+                     assoc :async.virtual-futures {::ns (find-ns 'nodely.engine.virtual-workers)
+                                                   ::opts-fn (constantly nil)})
+     (catch Exception e e))
+;; End Virtual Threads
+
 (defn- engine-fn
   [engine-name use]
   (ns-resolve (::ns (engine-data engine-name)) use))

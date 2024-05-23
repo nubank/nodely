@@ -3,7 +3,9 @@
   (:require
    [clojure.core.async :as async]
    [clojure.test :refer :all]
-   [nodely.api.v0 :as api :refer [>leaf >sequence >value]]
+   [criterium.core :as criterium]
+   [matcher-combinators.matchers :as matchers]
+   [nodely.api.v0 :as api :refer [>leaf >sequence >value blocking]]
    [nodely.test-helpers :as t]))
 
 (def env {:x (>value 2)
@@ -21,6 +23,25 @@
 (def sequence-node-env-with-missing-key
   {:y (>sequence inc ?x)})
 
+(def env-with-nine-sleeps {:a (blocking (>leaf (do (Thread/sleep 1000) :a)))
+                           :b (blocking (>leaf (do (Thread/sleep 1000) :b)))
+                           :c (blocking (>leaf (do (Thread/sleep 1000) :c)))
+                           :d (blocking (>leaf (do (Thread/sleep 1000) :d)))
+                           :e (blocking (>leaf (do (Thread/sleep 1000) :e)))
+                           :f (blocking (>leaf (do (Thread/sleep 1000) :f)))
+                           :g (blocking (>leaf (do (Thread/sleep 1000) :g)))
+                           :h (blocking (>leaf (do (Thread/sleep 1000) :h)))
+                           :i (blocking (>leaf (do (Thread/sleep 1000) :i)))
+                           :z (>leaf (into #{} [?a ?b ?c ?d ?e ?f ?g ?h ?i]))})
+
+(def parallel-engines
+  #{:core-async.lazy-scheduling
+    :core-async.iterative-scheduling
+    :async.manifold
+    :applicative.promesa
+    :applicative.core-async
+    :async.virtual-futures})
+
 (defn channel-interface
   [engine-key]
   (get-in api/engine-data [engine-key ::api/eval-key-channel]))
@@ -35,6 +56,13 @@
           (t/matching 5 (async/<!! (api/eval-key-channel env :z {::api/engine engine-key}))))
         (t/testing "returning a result to a channel with each engine"
           (t/matching 5 (async/<!! (api/eval-node-channel env (>leaf ?z) {::api/engine engine-key}))))))
+
+    (when (parallel-engines engine-key)
+      (t/testing "when we have 9 1-second blocking nodes in one environment, it can run in fewer than 2 seconds"
+        (t/testing "async version runs parallel when option is neglected"
+          (let [[nanosec-async _] (criterium/time-body (api/eval-key env-with-nine-sleeps :z))]
+            (t/matching (matchers/within-delta 1000000000 1000000000)
+                        nanosec-async)))))
 
     (t/testing "eval-works-across-all-engines"
       (t/testing "evaling an env where all referred nodes exist works"
@@ -63,6 +91,6 @@
                     (try (api/eval-key sequence-node-env-with-missing-key :y {::api/engine engine-key})
                          (catch clojure.lang.ExceptionInfo e (ex-message e))))))))
 
-(t/deftest new-eval-node-sequence
+(t/deftest api-test
   (for [engine (keys api/engine-data)]
     (engine-test-suite engine)))

@@ -49,9 +49,9 @@
   [description & assertions]
   (->> (flatten assertions)
        (remove nil?)
-       (map (fn [assertion] (update assertion :description #(if (empty? %)
-                                                              description
-                                                              (string/join " - " [description %])))))))
+       (mapv (fn [assertion] (update assertion :description #(if (empty? %)
+                                                               description
+                                                               (string/join " - " [description %])))))))
 
 (comment
   (deftest my-test-2
