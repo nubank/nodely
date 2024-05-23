@@ -324,7 +324,7 @@ Setting a sub-engine (evaluation context) is done with the `:nodely.engine.appli
 
 Everything related to the applicative engine is currently experimental and subject to change.
 
-# Async Virtual Futures
+### Async Virtual Futures
 
 This engine relies on support to Virtual Threads added in Java 21. This engine will only be loaded and enabled in the api if you are running Java 21 or above.
 This engine works similarly to :async.manifold engine but dispatching futures using virtual threads instead.
