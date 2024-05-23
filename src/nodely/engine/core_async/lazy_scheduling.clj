@@ -12,41 +12,38 @@
 (declare eval-async)
 
 (defn eval-sequence
-  [node
+  [{::data/keys [process-node input tags]}
    lazy-env
    {::keys [max-sequence-parallelism out-ch exception-ch]
-    :or {max-sequence-parallelism 4}
-    :as opts}]
+    :or    {max-sequence-parallelism 4}
+    :as    opts}]
   (nodely.async/jog
-   (let [dep             (::data/input node)
-         input-chan      (get lazy-env dep)
-         f-ch            (async/chan 1)
-         f               (do (eval-async (::data/process-node node)
-                                         lazy-env
-                                         (assoc opts ::out-ch f-ch))
-                             (::data/value (async/<! f-ch)))
-         sequence        (map data/value (::data/value (async/<! input-chan)))
-         in-chan         (async/to-chan! sequence)
-         pipeline-result (async/chan)]
-     (async/pipeline-async max-sequence-parallelism
-                           pipeline-result
-                           (fn [v ch]
-                             (nodely.async/jog
-                              (async/>! ch (nodely.async/<user-request
-                                            (nodely.async/evaluation-channel
-                                             f
-                                             (::data/value v)
-                                             {:exception-ch exception-ch
-                                              :blocking (-> node
-                                                            ::data/tags
-                                                            ::data/blocking)})
-                                            exception-ch))
-                              (async/close! ch)))
-                           in-chan)
-     (async/>! out-ch
-               (data/value (map ::data/value
-                                (nodely.async/<request (async/into [] pipeline-result)
-                                                       exception-ch)))))))
+   (when-let [input-chan (nodely.async/feedback-try exception-ch (core/get! lazy-env input))]
+     (let [f-ch            (async/chan 1)
+           f               (do (eval-async process-node
+                                           lazy-env
+                                           (assoc opts ::out-ch f-ch))
+                               (::data/value (async/<! f-ch)))
+           sequence        (map data/value (::data/value (async/<! input-chan)))
+           in-chan         (async/to-chan! sequence)
+           pipeline-result (async/chan)]
+       (async/pipeline-async max-sequence-parallelism
+                             pipeline-result
+                             (fn [v ch]
+                               (nodely.async/jog
+                                (async/>! ch (nodely.async/<user-request
+                                              (nodely.async/evaluation-channel
+                                               f
+                                               (::data/value v)
+                                               {:exception-ch exception-ch
+                                                :blocking     (-> tags ::data/blocking)})
+                                              exception-ch))
+                                (async/close! ch)))
+                             in-chan)
+       (async/>! out-ch
+                 (data/value (map ::data/value
+                                  (nodely.async/<request (async/into [] pipeline-result)
+                                                         exception-ch))))))))
 
 (defn eval-branch
   [{::data/keys [condition truthy falsey]}
@@ -71,16 +68,18 @@
       :value    (async/put! out-ch node)
       :leaf     (nodely.async/jog
                  (let [deps       (seq (::data/inputs node))
-                       deps-chans (mapv #(get lazy-env %) deps)
-                       values     (zipmap deps (nodely.async/<request (async/map vector deps-chans) exception-ch))
-                       in         (core/prepare-inputs (::data/inputs node) values)]
-                   (async/>! out-ch
-                             (nodely.async/<request (nodely.async/evaluation-channel
-                                                     (::data/fn node) in {:exception-ch exception-ch
-                                                                          :blocking (-> node
-                                                                                        ::data/tags
-                                                                                        ::data/blocking)})
-                                                    exception-ch))))
+                       deps-chans (nodely.async/feedback-try exception-ch
+                                                             (mapv #(core/get! lazy-env %) deps))]
+                   (when deps-chans
+                     (let [values (zipmap deps (nodely.async/<request (async/map vector deps-chans) exception-ch))
+                           in     (core/prepare-inputs (::data/inputs node) values)]
+                       (async/>! out-ch
+                                 (nodely.async/<request (nodely.async/evaluation-channel
+                                                         (::data/fn node) in {:exception-ch exception-ch
+                                                                              :blocking (-> node
+                                                                                            ::data/tags
+                                                                                            ::data/blocking)})
+                                                        exception-ch))))))
       :sequence (eval-sequence node lazy-env opts)
       :branch   (eval-branch node lazy-env opts)))
   out-ch)

@@ -8,7 +8,7 @@
 
 (defn eval-leaf
   [node resolved-env]
-  (let [in (core/prepare-inputs (::data/inputs node) resolved-env)]
+  (let [in (core/prepare-inputs (data/node-inputs node) resolved-env)]
     (core/eval-leaf node in)))
 
 (defn eval-sequence
@@ -16,7 +16,8 @@
                       :or    {max-sequence-parallelism 4}}]
   (let [in-key          (::data/input node)
         f               (::data/value (first (core/node->value (::data/process-node node) resolved-env)))
-        sequence        (map data/value (get (core/prepare-inputs [in-key] resolved-env) in-key))
+        ;; TODO: add sequences to the test env
+        sequence        (map data/value (core/get! (core/prepare-inputs [in-key] resolved-env) in-key))
         in-chan         (async/to-chan! sequence)
         pipeline-result (async/chan)]
     (async/pipeline max-sequence-parallelism
@@ -95,7 +96,8 @@
    (let [paths+envs (core/all-paths-for-node k env)]
      (if (= 1 (count paths+envs))
        (let [node-deps     (core/dependencies-for k env)
-             env-with-deps (select-keys env (cons k node-deps))]
+             env-with-deps (into {} (for [my-key (cons k node-deps)]
+                                      [my-key (core/get! env my-key)]))]
          (merge env (eval-env env-with-deps opts)))
        (let [node-deps     (core/committed-dependencies k env)
              env-with-deps (select-keys env node-deps)

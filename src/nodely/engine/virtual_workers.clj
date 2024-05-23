@@ -1,8 +1,8 @@
-(ns nodely.engine.manifold
+(ns nodely.engine.virtual-workers
   (:refer-clojure :exclude [eval])
   (:require
    [loom.alg :as alg]
-   [manifold.deferred :as deferred]
+   [nodely.engine.virtual-future :as deferred]
    [nodely.data :as data]
    [nodely.engine.core :as core]))
 
@@ -25,7 +25,7 @@
         f      (::data/value (eval-async (::data/process-node node) future-env))
         in     (prepare-inputs [in-key] future-env)]
     (data/value (->> (get in in-key)
-                     (mapv #(deferred/future (f %)))
+                     (mapv #(deferred/vfuture (f %)))
                      (mapv deref)))))
 
 (defn eval-async
@@ -41,8 +41,8 @@
   (let [graph      (core/env->graph env)
         top-sort   (alg/topsort graph)
         future-env (reduce (fn [acc k]
-                             (let [node (core/get! env k)]
-                               (assoc acc k (deferred/future (eval-async node acc)))))
+                             (let [node (get env k)]
+                               (assoc acc k (deferred/vfuture (eval-async node acc)))))
                            {}
                            top-sort)]
     (into {} (map (juxt key (comp deref val)) future-env))))
