@@ -1,7 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.17.0 / 2024-05-23
 - Better and more consistent error messages when there is a missing key in an environment.
+- Add new engine :async.virtual-futures that uses Java 21 support for virtual threads
 
 ## 1.16.0 / 2024-02-16
 - Allow sequences to refer to any node in the environment for the mapped fn

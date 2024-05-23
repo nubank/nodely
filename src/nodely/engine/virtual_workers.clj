@@ -1,10 +1,9 @@
 (ns nodely.engine.virtual-workers
   (:refer-clojure :exclude [eval])
-  (:require
-   [loom.alg :as alg]
-   [nodely.engine.virtual-future :as deferred]
-   [nodely.data :as data]
-   [nodely.engine.core :as core]))
+  (:require [loom.alg :as alg]
+            [nodely.engine.virtual-future :as virtual-future]
+            [nodely.data :as data]
+            [nodely.engine.core :as core]))
 
 (declare eval-async)
 
@@ -25,7 +24,7 @@
         f      (::data/value (eval-async (::data/process-node node) future-env))
         in     (prepare-inputs [in-key] future-env)]
     (data/value (->> (get in in-key)
-                     (mapv #(deferred/vfuture (f %)))
+                     (mapv #(virtual-future/vfuture (f %)))
                      (mapv deref)))))
 
 (defn eval-async
@@ -41,8 +40,8 @@
   (let [graph      (core/env->graph env)
         top-sort   (alg/topsort graph)
         future-env (reduce (fn [acc k]
-                             (let [node (get env k)]
-                               (assoc acc k (deferred/vfuture (eval-async node acc)))))
+                             (let [node (core/get! env k)]
+                               (assoc acc k (virtual-future/vfuture (eval-async node acc)))))
                            {}
                            top-sort)]
     (into {} (map (juxt key (comp deref val)) future-env))))

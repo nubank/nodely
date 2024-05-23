@@ -49,7 +49,7 @@
   [description & assertions]
   (->> (flatten assertions)
        (remove nil?)
-       (map (fn [assertion] (update assertion :description #(if (empty? %)
+       (mapv (fn [assertion] (update assertion :description #(if (empty? %)
                                                               description
                                                               (string/join " - " [description %])))))))
 

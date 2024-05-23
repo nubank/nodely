@@ -51,13 +51,12 @@
                                      ::eval-key-channel true}})
 
 ;; Java 21 Virtual Threads Support
-
-(when (<= 21.0 (Double/parseDouble (System/getProperty "java.vm.specification.version")))
-  (require '[nodely.engine.virtual-workers])
-  (alter-var-root #'engine-data
-                  assoc :async.virtual-futures {::ns (find-ns 'nodely.engine.virtual-workers)
-                                                ::opts-fn (constantly nil)}))
-
+(try (import java.util.concurrent.ThreadPerTaskExecutor)
+     (require '[nodely.engine.virtual-workers])
+     (alter-var-root #'engine-data
+                     assoc :async.virtual-futures {::ns (find-ns 'nodely.engine.virtual-workers)
+                                                   ::opts-fn (constantly nil)})
+     (catch Exception e e))
 ;; End Virtual Threads
 
 (defn- engine-fn
