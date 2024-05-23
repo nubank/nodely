@@ -1,6 +1,6 @@
 (ns nodely.engine.virtual-future
   (:import
-   [clojure.lang IBlockingDeref IDeref IPending IFn]
+   [clojure.lang IBlockingDeref IDeref IPending]
    [java.util.concurrent ExecutorService Executors Future]))
 
 (def ^:private virtual-thread-factory

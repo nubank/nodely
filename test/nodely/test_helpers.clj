@@ -50,8 +50,8 @@
   (->> (flatten assertions)
        (remove nil?)
        (mapv (fn [assertion] (update assertion :description #(if (empty? %)
-                                                              description
-                                                              (string/join " - " [description %])))))))
+                                                               description
+                                                               (string/join " - " [description %])))))))
 
 (comment
   (deftest my-test-2

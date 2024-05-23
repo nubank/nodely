@@ -1,11 +1,12 @@
 (ns nodely.api-test
   (:refer-clojure :exclude [cond])
-  (:require [clojure.core.async :as async]
-            [clojure.test :refer :all]
-            [criterium.core :as criterium]
-            [matcher-combinators.matchers :as matchers]
-            [nodely.api.v0 :as api :refer [>leaf >sequence >value blocking]]
-            [nodely.test-helpers :as t]))
+  (:require
+   [clojure.core.async :as async]
+   [clojure.test :refer :all]
+   [criterium.core :as criterium]
+   [matcher-combinators.matchers :as matchers]
+   [nodely.api.v0 :as api :refer [>leaf >sequence >value blocking]]
+   [nodely.test-helpers :as t]))
 
 (def env {:x (>value 2)
           :y (>value 3)

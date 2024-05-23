@@ -1,9 +1,10 @@
 (ns nodely.engine.virtual-workers
   (:refer-clojure :exclude [eval])
-  (:require [loom.alg :as alg]
-            [nodely.engine.virtual-future :as virtual-future]
-            [nodely.data :as data]
-            [nodely.engine.core :as core]))
+  (:require
+   [loom.alg :as alg]
+   [nodely.data :as data]
+   [nodely.engine.core :as core]
+   [nodely.engine.virtual-future :as virtual-future]))
 
 (declare eval-async)
 
