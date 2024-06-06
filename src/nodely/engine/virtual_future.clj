@@ -1,6 +1,6 @@
 (ns nodely.engine.virtual-future
   (:import
-   [clojure.lang IBlockingDeref IDeref IPending]
+   [clojure.lang IBlockingDeref IDeref IPending Var]
    [java.util.concurrent ExecutorService Executors Future]))
 
 (def ^:private virtual-thread-factory
@@ -12,10 +12,12 @@
 
 (deftype GreenFuture [^Future executor-future]
   IDeref
-  (deref [_] (#'clojure.core/deref-future executor-future))
+  (deref [_] (.get executor-future))
   IBlockingDeref
   (deref [_ timeout-ms timeout-val]
-    (#'clojure.core/deref-future executor-future timeout-ms timeout-val))
+    (try (.get executor-future timeout-ms java.util.concurrent.TimeUnit/MILLISECONDS)
+         (catch java.util.concurrent.TimeoutException e
+           timeout-val)))
   IPending
   (isRealized [_] (.isDone executor-future))
   Future
@@ -29,7 +31,10 @@
   "This function is similar to the clojure.core future-call. The only difference is that it receives as a param a dynamic
    executor-service instead of using clojure.lang.Agent/soloExecutor"
   [^ExecutorService executor-service f]
-  (let [f (#'clojure.core/binding-conveyor-fn f)
+  (let [binds (Var/getThreadBindingFrame)
+        f (fn []
+            (Var/resetThreadBindingFrame binds)
+            (f))
         fut (.submit executor-service ^Callable f)]
     (GreenFuture. fut)))
 
