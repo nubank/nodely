@@ -55,7 +55,8 @@
      (require '[nodely.engine.virtual-workers])
      (alter-var-root #'engine-data
                      assoc :async.virtual-futures {::ns (find-ns 'nodely.engine.virtual-workers)
-                                                   ::opts-fn (constantly nil)})
+                                                   ::opts-fn (constantly nil)
+                                                   ::eval-key-channel true})
      (catch Exception e e))
 ;; End Virtual Threads
 
