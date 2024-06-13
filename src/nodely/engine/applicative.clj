@@ -8,7 +8,8 @@
    [nodely.engine.applicative.promesa :as promesa]
    [nodely.engine.applicative.protocols :as protocols]
    [nodely.engine.core :as core]
-   [nodely.engine.lazy-env :as lazy-env]))
+   [nodely.engine.lazy-env :as lazy-env]
+   [clojure.core.async :as async]))
 
 (prefer-method pp/simple-dispatch clojure.lang.IPersistentMap clojure.lang.IDeref)
 
@@ -97,7 +98,14 @@
          lazy-env (lazy-env/lazy-env env eval-in-context opts)]
      (m/fmap ::data/value (get lazy-env k)))))
 
-(def eval-key-channel eval-key-contextual)
+(defn eval-key-channel
+  ([env k]
+   (eval-key-channel env k {}))
+  ([env k opts]
+   (let [contextual-v (eval-key-contextual env k opts)
+         chan         (async/promise-chan)]
+     (m/fmap (partial async/put! chan) contextual-v)
+     chan)))
 
 (defn eval
   ([env k]

@@ -1,18 +1,18 @@
 (ns nodely.api.v0
   (:refer-clojure :exclude [cond eval sequence])
-  (:require
-   [nodely.data]
-   [nodely.engine.applicative :as applicative]
-   [nodely.engine.applicative.core-async :as applicative.core-async]
-   [nodely.engine.applicative.promesa :as applicative.promesa]
-   [nodely.engine.core :as engine-core]
-   [nodely.engine.core-async.core]
-   [nodely.engine.core-async.iterative-scheduling]
-   [nodely.engine.core-async.lazy-scheduling]
-   [nodely.engine.lazy]
-   [nodely.engine.manifold]
-   [nodely.syntax]
-   [nodely.vendor.potemkin :refer [import-fn import-vars]]))
+  (:require [nodely.data]
+            [nodely.engine.applicative :as applicative]
+            [nodely.engine.applicative.core-async :as applicative.core-async]
+            [nodely.engine.applicative.promesa :as applicative.promesa]
+            [nodely.engine.applicative.virtual-future :as applicative.virtual-future]
+            [nodely.engine.core :as engine-core]
+            [nodely.engine.core-async.core]
+            [nodely.engine.core-async.iterative-scheduling]
+            [nodely.engine.core-async.lazy-scheduling]
+            [nodely.engine.lazy]
+            [nodely.engine.manifold]
+            [nodely.syntax]
+            [nodely.vendor.potemkin :refer [import-fn import-vars]]))
 
 (import-vars nodely.syntax/>cond
              nodely.syntax/>if
@@ -53,10 +53,13 @@
 ;; Java 21 Virtual Threads Support
 (try (import java.util.concurrent.ThreadPerTaskExecutor)
      (require '[nodely.engine.virtual-workers])
-     (alter-var-root #'engine-data
-                     assoc :async.virtual-futures {::ns (find-ns 'nodely.engine.virtual-workers)
-                                                   ::opts-fn (constantly nil)
-                                                   ::eval-key-channel true})
+     (alter-var-root #'engine-data assoc
+                     :async.virtual-futures {::ns               (find-ns 'nodely.engine.virtual-workers)
+                                             ::opts-fn          (constantly nil)
+                                             ::eval-key-channel true}
+                     :applicative.virtual-future {::ns               (find-ns 'nodely.engine.applicative)
+                                                  ::opts-fn          #(assoc % ::applicative/context applicative.virtual-future/context)
+                                                  ::eval-key-channel false})
      (catch Exception e e))
 ;; End Virtual Threads
 
