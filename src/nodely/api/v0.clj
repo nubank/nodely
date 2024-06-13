@@ -4,7 +4,6 @@
             [nodely.engine.applicative :as applicative]
             [nodely.engine.applicative.core-async :as applicative.core-async]
             [nodely.engine.applicative.promesa :as applicative.promesa]
-            [nodely.engine.applicative.virtual-future :as applicative.virtual-future]
             [nodely.engine.core :as engine-core]
             [nodely.engine.core-async.core]
             [nodely.engine.core-async.iterative-scheduling]
@@ -53,6 +52,7 @@
 ;; Java 21 Virtual Threads Support
 (try (import java.util.concurrent.ThreadPerTaskExecutor)
      (require '[nodely.engine.virtual-workers])
+     (require '[nodely.engine.applicative.virtual-future :as applicative.virtual-future])
      (alter-var-root #'engine-data assoc
                      :async.virtual-futures {::ns               (find-ns 'nodely.engine.virtual-workers)
                                              ::opts-fn          (constantly nil)
