@@ -40,6 +40,7 @@
     :async.manifold
     :applicative.promesa
     :applicative.core-async
+    :applicative.virtual-future
     :async.virtual-futures})
 
 (defn channel-interface

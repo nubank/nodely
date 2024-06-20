@@ -3,6 +3,7 @@
   (:require
    [cats.context :as context]
    [cats.core :as m]
+   [clojure.core.async :as async]
    [clojure.pprint :as pp]
    [nodely.data :as data]
    [nodely.engine.applicative.promesa :as promesa]
@@ -97,7 +98,14 @@
          lazy-env (lazy-env/lazy-env env eval-in-context opts)]
      (m/fmap ::data/value (get lazy-env k)))))
 
-(def eval-key-channel eval-key-contextual)
+(defn eval-key-channel
+  ([env k]
+   (eval-key-channel env k {}))
+  ([env k opts]
+   (let [contextual-v (eval-key-contextual env k opts)
+         chan         (async/promise-chan)]
+     (m/fmap (partial async/put! chan) contextual-v)
+     chan)))
 
 (defn eval
   ([env k]
