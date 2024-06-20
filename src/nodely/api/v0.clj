@@ -58,7 +58,8 @@
                                              ::opts-fn          (constantly nil)
                                              ::eval-key-channel true}
                      :applicative.virtual-future {::ns               (find-ns 'nodely.engine.applicative)
-                                                  ::opts-fn          #(assoc % ::applicative/context applicative.virtual-future/context)
+                                                  ::opts-fn          #(assoc % ::applicative/context
+                                                                             (var-get (resolve 'nodely.engine.applicative.virtual-future/context)))
                                                   ::eval-key-channel false})
      (catch Exception e e))
 ;; End Virtual Threads
