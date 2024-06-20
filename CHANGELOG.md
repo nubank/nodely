@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.18.0 / 2024-06-20
+- Add virtual-future based applicative engine (for java21+)
+
 ## 1.17.0 / 2024-05-23
 - Better and more consistent error messages when there is a missing key in an environment.
 - Add new engine :async.virtual-futures that uses Java 21 support for virtual threads

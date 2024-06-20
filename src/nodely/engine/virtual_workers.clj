@@ -1,6 +1,7 @@
 (ns nodely.engine.virtual-workers
   (:refer-clojure :exclude [eval])
   (:require
+   [clojure.core.async :as async]
    [loom.alg :as alg]
    [nodely.data :as data]
    [nodely.engine.core :as core]
@@ -64,3 +65,10 @@
 (defn eval-node
   [node env]
   (eval-key (assoc env ::target node) ::target))
+
+(defn eval-key-channel
+  [env k]
+  (let [ret (async/chan 1)]
+    (virtual-future/vfuture
+     (async/>!! ret (eval-key env k)))
+    ret))
