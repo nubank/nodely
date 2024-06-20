@@ -12,7 +12,6 @@
    [nodely.engine.applicative.core-async :as core-async]
    [nodely.engine.applicative.promesa :as promesa]
    [nodely.engine.applicative.synchronous :as synchronous]
-   [nodely.engine.applicative.virtual-future :as virtual-future]
    [nodely.engine.core :as core]
    [nodely.engine.core-async.core :as nodely.async]
    [nodely.engine.schema :as schema]
@@ -225,27 +224,6 @@
                           (s/with-fn-validation
                             (applicative/eval-key env-with-failing-schema :c {::applicative/fvalidate schema/fvalidate
                                                                               ::applicative/context synchronous/context}))))))))
-
-(deftest virtual-future-applicative-test
-  (let [simple-env {:a (>value 2)
-                    :b (>value 1)
-                    :c (>leaf (+ ?a ?b))}
-        env-with-failing-schema {:a (>value 2)
-                                 :b (>value 1)
-                                 :c (yielding-schema (>leaf (+ ?a ?b)) s/Bool)}]
-    (testing "it should not fail"
-      (is (match? 3 (applicative/eval-key simple-env :c {::applicative/context virtual-future/context}))))
-    (testing "more complicated example"
-      (is (match? 4 (applicative/eval-key tricky-example :z {::applicative/context virtual-future/context}))))
-    (testing "returns ex-info when schema is selected as fvalidate, and schema fn validation is enabled"
-      (is (thrown-match? clojure.lang.ExceptionInfo
-                         {:type   :schema.core/error
-                          :schema java.lang.Boolean
-                          :value  3}
-                         (ex-data
-                          (s/with-fn-validation
-                            (applicative/eval-key env-with-failing-schema :c {::applicative/fvalidate schema/fvalidate
-                                                                              ::applicative/context virtual-future/context}))))))))
 
 (deftest core-async-applicative-test
   (let [simple-env {:a (>value 2)
