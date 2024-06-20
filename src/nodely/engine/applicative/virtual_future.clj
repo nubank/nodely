@@ -1,8 +1,10 @@
 (ns nodely.engine.applicative.virtual-future
-  (:require [nodely.engine.virtual-future :as virtual-future :refer [vfuture]]
-            [cats.protocols :as mp]
-            [nodely.engine.applicative.protocols :as protocols])
-  (:import nodely.engine.virtual_future.GreenFuture))
+  (:require
+   [cats.protocols :as mp]
+   [nodely.engine.applicative.protocols :as protocols]
+   [nodely.engine.virtual-future :as virtual-future :refer [vfuture]])
+  (:import
+   nodely.engine.virtual_future.GreenFuture))
 
 (declare context)
 

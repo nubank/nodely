@@ -3,13 +3,13 @@
   (:require
    [cats.context :as context]
    [cats.core :as m]
+   [clojure.core.async :as async]
    [clojure.pprint :as pp]
    [nodely.data :as data]
    [nodely.engine.applicative.promesa :as promesa]
    [nodely.engine.applicative.protocols :as protocols]
    [nodely.engine.core :as core]
-   [nodely.engine.lazy-env :as lazy-env]
-   [clojure.core.async :as async]))
+   [nodely.engine.lazy-env :as lazy-env]))
 
 (prefer-method pp/simple-dispatch clojure.lang.IPersistentMap clojure.lang.IDeref)
 
