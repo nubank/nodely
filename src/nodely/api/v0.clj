@@ -61,13 +61,17 @@
                      :applicative.virtual-future {::ns               (find-ns 'nodely.engine.applicative)
                                                   ::opts-fn          #(assoc % ::applicative/context
                                                                              (var-get (resolve 'nodely.engine.applicative.virtual-future/context)))
-                                                  ::eval-key-channel false})
+                                                  ::eval-key-channel true})
      (catch Exception e e))
 ;; End Virtual Threads
 
 (defn- engine-fn
   [engine-name use]
-  (ns-resolve (::ns (engine-data engine-name)) use))
+  (if-let [engine-data (engine-data engine-name)]
+    (ns-resolve (::ns engine-data) use)
+    (throw (ex-info "Unsupported engine specified, please specify a supported engine."
+                    {:specified-engine-name engine-name
+                     :supported-engine-names (set (keys engine-data))}))))
 
 (def engine-fn (memoize engine-fn))
 
