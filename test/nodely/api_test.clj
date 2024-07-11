@@ -23,6 +23,12 @@
 (def sequence-node-env-with-missing-key
   {:y (>sequence inc ?x)})
 
+(def exceptions-all-the-way-down
+  {:a (>leaf (throw (ex-info "Oops!" {})))
+   :b (>leaf (inc ?a))
+   :c (>leaf (inc ?b))
+   :d (>leaf (inc ?c))})
+
 (def env-with-nine-sleeps {:a (blocking (>leaf (do (Thread/sleep 1000) :a)))
                            :b (blocking (>leaf (do (Thread/sleep 1000) :b)))
                            :c (blocking (>leaf (do (Thread/sleep 1000) :c)))
@@ -90,7 +96,12 @@
       (t/testing "sequence with missing key"
         (t/matching #"Missing key on env"
                     (try (api/eval-key sequence-node-env-with-missing-key :y {::api/engine engine-key})
-                         (catch clojure.lang.ExceptionInfo e (ex-message e))))))))
+                         (catch clojure.lang.ExceptionInfo e (ex-message e))))))
+
+    (t/testing "handling nested exceptions"
+      (t/matching #"Oops!"
+                  (try (api/eval-key exceptions-all-the-way-down :d {::api/engine engine-key})
+                       (catch clojure.lang.ExceptionInfo e (ex-message e)))))))
 
 (t/deftest api-test
   (for [engine (keys api/engine-data)]
