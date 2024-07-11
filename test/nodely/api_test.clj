@@ -106,6 +106,5 @@
 
 (t/deftest api-test
   (for [engine (set/difference (set (keys api/engine-data))
-                               #{:core-async.iterative-scheduling
-                                 :async.virtual-futures})]
+                               #{:async.virtual-futures})]
     (engine-test-suite engine)))

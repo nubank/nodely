@@ -2,6 +2,7 @@
   (:refer-clojure :exclude [eval])
   (:require
    [clojure.core.async :as async]
+   [nodely.engine.core-async.core :refer [<? go-future]]
    [clojure.set :as set]
    [nodely.data :as data]
    [nodely.engine.core :as core]))
@@ -68,10 +69,10 @@
   environment."
   [node resolved-env opts]
   (case (::data/type node)
-    :value    (async/go node)
-    :leaf     (async/go (eval-leaf node resolved-env))
+    :value    (go-future node)
+    :leaf     (go-future (eval-leaf node resolved-env))
     :sequence (eval-sequence node resolved-env opts)
-    :branch   (async/go (eval-branch node resolved-env))))
+    :branch   (go-future (eval-branch node resolved-env))))
 
 (defn eval-env
   "Env must have no branches"
@@ -84,9 +85,9 @@
       (async/go
         (let [deps       (seq (core/dependencies-for k env))
               deps-chans (mapv env+channels deps)
-              values     (zipmap deps (async/<! (async/map vector deps-chans)))]
+              values     (zipmap deps (<? (async/map vector deps-chans)))]
           (async/>! (env+channels k)
-                    (async/<! (eval-async (env k) values opts))))))
+                    (<? (eval-async (env k) values opts))))))
     (into {} (map (juxt key (comp async/<!! val)) env+channels))))
 
 (defn eval
