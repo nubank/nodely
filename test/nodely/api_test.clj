@@ -2,8 +2,8 @@
   (:refer-clojure :exclude [cond])
   (:require
    [clojure.core.async :as async]
-   [clojure.test :refer :all]
    [clojure.set :as set]
+   [clojure.test :refer :all]
    [criterium.core :as criterium]
    [matcher-combinators.matchers :as matchers]
    [nodely.api.v0 :as api :refer [>leaf >sequence >value blocking]]

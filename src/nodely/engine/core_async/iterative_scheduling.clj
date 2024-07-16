@@ -2,10 +2,10 @@
   (:refer-clojure :exclude [eval])
   (:require
    [clojure.core.async :as async]
-   [nodely.engine.core-async.core :refer [<? go-future]]
    [clojure.set :as set]
    [nodely.data :as data]
-   [nodely.engine.core :as core]))
+   [nodely.engine.core :as core]
+   [nodely.engine.core-async.core :refer [<? go-future]]))
 
 (defn eval-leaf
   [node resolved-env]
