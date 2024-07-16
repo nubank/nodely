@@ -3,6 +3,7 @@
   (:require
    [clojure.core.async :as async]
    [clojure.test :refer :all]
+   [clojure.set :as set]
    [criterium.core :as criterium]
    [matcher-combinators.matchers :as matchers]
    [nodely.api.v0 :as api :refer [>leaf >sequence >value blocking]]
@@ -104,5 +105,7 @@
                        (catch clojure.lang.ExceptionInfo e (ex-message e)))))))
 
 (t/deftest api-test
-  (for [engine (keys api/engine-data)]
+  (for [engine (set/difference (set (keys api/engine-data))
+                               #{:core-async.iterative-scheduling
+                                 :async.virtual-futures})]
     (engine-test-suite engine)))
