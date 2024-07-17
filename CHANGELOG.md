@@ -2,6 +2,8 @@
 
 ## 1.18.1 / 2024-07-16
 - Fix virtual-future applicative engine error handling so that ExecutionExceptions are always unwrapped
+- Improve ergonomics when an unknown engine is specified
+- Mark virtual future applicative engine as `eval-key-channel` true.
 
 ## 1.18.0 / 2024-06-20
 - Add virtual-future based applicative engine (for java21+)
