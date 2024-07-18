@@ -8,40 +8,44 @@
 
 (declare context)
 
+(defn deref-unwrapped
+  [it]
+  (try (deref it)
+       (catch java.util.concurrent.ExecutionException e
+         (throw (.getCause e)))))
+
 (extend-type GreenFuture
   mp/Contextual
   (-get-context [_] context)
 
   mp/Extract
   (-extract [it]
-    (try (deref it)
-         (catch java.util.concurrent.ExecutionException e
-           (throw (.getCause e))))))
+    (deref-unwrapped it)))
 
 (def context
   (reify
     mp/Context
     protocols/RunNode
     (-apply-fn  [_ f mv]
-      (vfuture (f (deref mv))))
+      (vfuture (f (deref-unwrapped mv))))
 
     mp/Functor
     (-fmap [mn f mv]
-      (vfuture (f (deref mv))))
+      (vfuture (f (deref-unwrapped mv))))
 
     mp/Monad
     (-mreturn [_ v]
       (vfuture v))
 
     (-mbind [mn mv f]
-      (vfuture (let [v (deref mv)]
-                 (deref (f v)))))
+      (vfuture (let [v (deref-unwrapped mv)]
+                 (deref-unwrapped (f v)))))
 
     mp/Applicative
     (-pure [_ v]
       (vfuture v))
 
     (-fapply [_ pf pv]
-      (vfuture (let [f (deref pf)
-                     v (deref pv)]
+      (vfuture (let [f (deref-unwrapped pf)
+                     v (deref-unwrapped pv)]
                  (f v))))))
