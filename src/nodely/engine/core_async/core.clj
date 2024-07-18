@@ -4,60 +4,6 @@
    [nodely.data :as data]
    [nodely.syntax :as syntax]))
 
-(defn nil-guard
-  [it]
-  (if (nil? it)
-    ::nil
-    it))
-
-(defn nil-unguard
-  [it]
-  (if (= it ::nil)
-    nil
-    it))
-
-(defn handle-read-value
-  [v]
-  (if (instance? Throwable v)
-    (throw v)
-    (nil-unguard v)))
-
-(defmacro <?
-  "Just like a <! macro, but if the value taken from the channel is a Throwable instance, it will throw it.
-  <! takes a val from port. Must be called inside a (go ...) or (go-try ...) block.
-  Will return nil if closed. Will park if nothing is available."
-  [ch]
-  `(handle-read-value (async/<! ~ch)))
-
-(defn promise-of
-  [v]
-  (let [ret (async/promise-chan)]
-    (async/put! ret (nil-guard v))
-    ret))
-
-(defmacro go-future
-  "Executes `body` in a core-async worker, with additional interesting
-  caveats compared with `go`:
-
-  - The body is assumed to execute once,
-  reading promise-chan core.async channels.
-
-  - The result of executing body will be born on the promise channel
-  returned by go-future
-
-  - If the body throws an uncaught excpetion, then that exception will
-  be born on the promise channel returned by go-future
-
-  - If a channel read attempted in body returns an exception, that
-  exception will be immediately thrown."
-  [& body]
-  `(let [ret# (async/promise-chan)]
-     (async/go (let [retv# (try (nil-guard ~@body)
-                                (catch Throwable t#
-                                  t#))]
-                 (async/>! ret# retv#)))
-     ret#))
-
 (defmacro meander
   "Wraps user expressions and pipes any exception through ex-ch"
   [ex-ch & body]
