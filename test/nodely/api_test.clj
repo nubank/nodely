@@ -109,3 +109,46 @@
                                #{:core-async.iterative-scheduling
                                  :async.virtual-futures})]
     (engine-test-suite engine)))
+
+(t/deftest incorrect-engine-id
+  (t/testing "we communicate how the client has specified an invalid input and what would be valid inputs"
+    (t/testing "eval"
+      (t/matching #"Unsupported engine specified, please specify a supported engine."
+                  (try (api/eval env :z {::api/engine :core.async.doesnt-exist})
+                       (catch clojure.lang.ExceptionInfo e (ex-message e))))
+      (t/matching {:specified-engine-name  :core.async.doesnt-exist
+                   :supported-engine-names set?}
+                  (try (api/eval env :z {::api/engine :core.async.doesnt-exist})
+                       (catch clojure.lang.ExceptionInfo e (ex-data e)))))
+    (t/testing "eval-key"
+      (t/matching #"Unsupported engine specified, please specify a supported engine."
+                  (try (api/eval-key env :z {::api/engine :core.async.doesnt-exist})
+                       (catch clojure.lang.ExceptionInfo e (ex-message e))))
+      (t/matching {:specified-engine-name  :core.async.doesnt-exist
+                   :supported-engine-names set?}
+                  (try (api/eval-key env :z {::api/engine :core.async.doesnt-exist})
+                       (catch clojure.lang.ExceptionInfo e (ex-data e)))))
+    (t/testing "eval-key-channel"
+      (t/matching #"Unsupported engine specified, please specify a supported engine."
+                  (try (api/eval-key-channel env :z {::api/engine :core.async.doesnt-exist})
+                       (catch clojure.lang.ExceptionInfo e (ex-message e))))
+      (t/matching {:specified-engine-name  :core.async.doesnt-exist
+                   :supported-engine-names set?}
+                  (try (api/eval-key-channel env :z {::api/engine :core.async.doesnt-exist})
+                       (catch clojure.lang.ExceptionInfo e (ex-data e)))))
+    (t/testing "eval-node"
+      (t/matching #"Unsupported engine specified, please specify a supported engine."
+                  (try (api/eval-node env (>leaf (inc ?z)) {::api/engine :core.async.doesnt-exist})
+                       (catch clojure.lang.ExceptionInfo e (ex-message e))))
+      (t/matching {:specified-engine-name  :core.async.doesnt-exist
+                   :supported-engine-names set?}
+                  (try (api/eval-node env (>leaf (inc ?z)) {::api/engine :core.async.doesnt-exist})
+                       (catch clojure.lang.ExceptionInfo e (ex-data e)))))
+    (t/testing "eval-node-channel"
+      (t/matching #"Unsupported engine specified, please specify a supported engine."
+                  (try (api/eval-node-channel env (>leaf (inc ?z)) {::api/engine :core.async.doesnt-exist})
+                       (catch clojure.lang.ExceptionInfo e (ex-message e))))
+      (t/matching {:specified-engine-name  :core.async.doesnt-exist
+                   :supported-engine-names set?}
+                  (try (api/eval-node-channel env (>leaf (inc ?z)) {::api/engine :core.async.doesnt-exist})
+                       (catch clojure.lang.ExceptionInfo e (ex-data e)))))))
