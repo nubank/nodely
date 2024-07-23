@@ -294,13 +294,13 @@
          (ex-data (async/<!! (applicative/eval-key-contextual env+channel-throw :c {::applicative/context core-async/context}))))))
   (testing "returns CompletableFuture when context is promesa"
     (is (match?
-         java.util.concurrent.CompletableFuture
+         nodely.engine.applicative.promesa.ApplicativeCompletableFuture
          (type (applicative/eval-key-contextual env+exception :c {::applicative/context promesa/context}))))))
 
 (deftest eval-key-contextual-return-type-test
   (are [context expected-type]
        (= expected-type
           (type (applicative/eval-key-contextual {:a (data/value 1)} :a {::applicative/context context})))
-    promesa/context     java.util.concurrent.CompletableFuture
+    promesa/context     nodely.engine.applicative.promesa.ApplicativeCompletableFuture
     core-async/context  clojure.core.async.impl.channels.ManyToManyChannel
     synchronous/context nodely.engine.applicative.synchronous.Box))
