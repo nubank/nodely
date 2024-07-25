@@ -26,8 +26,8 @@
                :c (>leaf (+ ?a ?b))})
 
 (def test-env+delay {:a (>leaf (+ 1 2))
-                     :b (>leaf (p/delay 1000 (* ?a 2)))
-                     :c (>leaf (p/delay 1000 (* ?a 3)))
+                     :b (>leaf (promesa/acf (p/delay 1000 (* ?a 2))))
+                     :c (>leaf (promesa/acf (p/delay 1000 (* ?a 3))))
                      :d (>leaf {:a ?a
                                 :b ?b
                                 :c ?c})})
@@ -294,13 +294,13 @@
          (ex-data (async/<!! (applicative/eval-key-contextual env+channel-throw :c {::applicative/context core-async/context}))))))
   (testing "returns CompletableFuture when context is promesa"
     (is (match?
-         java.util.concurrent.CompletableFuture
+         nodely.engine.applicative.promesa.ApplicativeCompletableFuture
          (type (applicative/eval-key-contextual env+exception :c {::applicative/context promesa/context}))))))
 
 (deftest eval-key-contextual-return-type-test
   (are [context expected-type]
        (= expected-type
           (type (applicative/eval-key-contextual {:a (data/value 1)} :a {::applicative/context context})))
-    promesa/context     java.util.concurrent.CompletableFuture
+    promesa/context     nodely.engine.applicative.promesa.ApplicativeCompletableFuture
     core-async/context  clojure.core.async.impl.channels.ManyToManyChannel
     synchronous/context nodely.engine.applicative.synchronous.Box))
