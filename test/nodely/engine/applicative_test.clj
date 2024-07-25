@@ -26,8 +26,8 @@
                :c (>leaf (+ ?a ?b))})
 
 (def test-env+delay {:a (>leaf (+ 1 2))
-                     :b (>leaf (p/delay 1000 (* ?a 2)))
-                     :c (>leaf (p/delay 1000 (* ?a 3)))
+                     :b (>leaf (promesa/acf (p/delay 1000 (* ?a 2))))
+                     :c (>leaf (promesa/acf (p/delay 1000 (* ?a 3))))
                      :d (>leaf {:a ?a
                                 :b ?b
                                 :c ?c})})

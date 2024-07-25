@@ -41,6 +41,9 @@
     `(do ~@args)))
 
 (defmacro acf
+  "Accepts two forms:
+  - If the first argument to acf is a vector of symbols, each symbol is assumed to be a boxing ApplicativeCompletableFuture, is unboxed, and the resulting value is bound to that symbol for the body of `acf`. Runs the remaining arguments to `acf` in an implicit do, then wraps the result in an ApplicativeCompletableFuture.
+  - If the first argument to acf is not a vector, runs body in an implicit do and wraps the result in an ApplicativeCompletableFuture."
   [& args]
   `(-wrap (of-acf ~@args)))
 
