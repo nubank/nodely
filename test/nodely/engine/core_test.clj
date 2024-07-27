@@ -145,7 +145,7 @@
          #{:a :b :c}
          (core/dependencies-for :d test-env)))))
 
-(deftest resolve
+(deftest resolve-test
   (testing "resolve map with two direct dependencies"
     (is (= {:x (data/value 2)
             :y (data/value 4)
