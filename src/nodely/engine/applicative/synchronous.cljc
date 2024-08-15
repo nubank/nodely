@@ -1,5 +1,6 @@
 (ns nodely.engine.applicative.synchronous
-  (:require [nodely.engine.applicative.protocols :as protocols]))
+  (:require
+   [nodely.engine.applicative.protocols :as protocols]))
 
 (declare context)
 

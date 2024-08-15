@@ -1,13 +1,14 @@
 (ns nodely.engine.applicative
   (:refer-clojure :exclude [eval sequence])
-  (:require [nodely.engine.applicative.core :as app]
-            [clojure.core.async :as async]
-            [clojure.pprint :as pp]
-            [nodely.data :as data]
-            [nodely.engine.applicative.promesa :as promesa]
-            [nodely.engine.applicative.protocols :as protocols]
-            [nodely.engine.core :as core]
-            [nodely.engine.lazy-env :as lazy-env]))
+  (:require
+   [clojure.core.async :as async]
+   [clojure.pprint :as pp]
+   [nodely.data :as data]
+   [nodely.engine.applicative.core :as app]
+   [nodely.engine.applicative.promesa :as promesa]
+   [nodely.engine.applicative.protocols :as protocols]
+   [nodely.engine.core :as core]
+   [nodely.engine.lazy-env :as lazy-env]))
 
 (prefer-method pp/simple-dispatch clojure.lang.IPersistentMap clojure.lang.IDeref)
 
@@ -21,7 +22,7 @@
   [node lazy-env {::keys [context] :as opts}]
   (let [in-key (::data/input node)
         mf     (app/fmap ::data/value
-                       (eval-node (::data/process-node node) lazy-env opts))
+                         (eval-node (::data/process-node node) lazy-env opts))
         mseq   (get lazy-env in-key)]
     (->> mseq
          (app/fmap (comp (partial app/sequence context)
@@ -53,10 +54,10 @@
         f         (with-meta (::data/fn leaf)
                     {::data/tags tags})]
     (app/mlet [v (app/apply-fn f (app/fmap #(core/prepare-inputs deps-keys (zipmap deps-keys %))
-                                             (app/sequence context (mapv #(get lazy-env %) deps-keys))))]
-            (if (in-context? v context)
-              (app/fmap data/value v)
-              (app/pure context (data/value v))))))
+                                           (app/sequence context (mapv #(get lazy-env %) deps-keys))))]
+              (if (in-context? v context)
+                (app/fmap data/value v)
+                (app/pure context (data/value v))))))
 
 (defn eval-node
   [node lazy-env opts]

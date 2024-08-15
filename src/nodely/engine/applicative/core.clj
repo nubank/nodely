@@ -1,6 +1,6 @@
 (ns nodely.engine.applicative.core
-  (:require [clojure.set :as set]
-            [nodely.engine.applicative.protocols :as p]))
+  (:require
+   [nodely.engine.applicative.protocols :as p]))
 
 (defn throw-illegal-argument
   {:no-doc true :internal true}
@@ -35,8 +35,8 @@
   (if-let [context (p/-get-context v)]
     context
     (throw-illegal-argument
-      (str "No context is set and it can not be automatically "
-           "resolved from provided value"))))
+     (str "No context is set and it can not be automatically "
+          "resolved from provided value"))))
 
 ;; END CONTEXT STUFF
 
@@ -77,7 +77,7 @@
   (bind mv identity))
 
 (defmacro mlet
-     "Monad composition macro that works like Clojure's
+  "Monad composition macro that works like Clojure's
      `let`. This facilitates much easier composition of
      monadic computations.
 
@@ -99,14 +99,14 @@
            (return (* b 2)))
          ;=> #<Just [4]>
      "
-     [bindings & body]
-     (when-not (and (vector? bindings)
-                    (not-empty bindings)
-                    (even? (count bindings)))
-       (throw (IllegalArgumentException. "bindings has to be a vector with even number of elements.")))
-     (->> (reverse (partition 2 bindings))
-          (reduce (fn [acc [l r]] `(bind ~r (fn [~l] ~acc)))
-                  `(do ~@body))))
+  [bindings & body]
+  (when-not (and (vector? bindings)
+                 (not-empty bindings)
+                 (even? (count bindings)))
+    (throw (IllegalArgumentException. "bindings has to be a vector with even number of elements.")))
+  (->> (reverse (partition 2 bindings))
+       (reduce (fn [acc [l r]] `(bind ~r (fn [~l] ~acc)))
+               `(do ~@body))))
 
 ;; APPLICATIVE STUFF
 (defn pure
@@ -167,7 +167,7 @@
     (reduce (fn [mvs mv]
               (mlet [v mv
                      vs mvs]
-                (return context (cons v vs))))
+                    (return context (cons v vs))))
             (return context ())
             (reverse mvs))))
 

@@ -1,20 +1,22 @@
 (ns nodely.engine.applicative.promesa
-  (:require [nodely.engine.applicative.protocols :as protocols]
-            [promesa.core :as p]
-            [promesa.protocols :as pp])
-  (:import java.util.concurrent.CompletableFuture))
+  (:require
+   [nodely.engine.applicative.protocols :as protocols]
+   [promesa.core :as p]
+   [promesa.protocols :as pp])
+  (:import
+   java.util.concurrent.CompletableFuture))
 
 (declare context)
 
 (extend-type CompletableFuture
-     protocols/Contextual
-     (-get-context [_] context)
+  protocols/Contextual
+  (-get-context [_] context)
 
-     protocols/Extract
-     (-extract [it]
-       (try (deref it)
-            (catch java.util.concurrent.ExecutionException e
-              (throw (.getCause e))))))
+  protocols/Extract
+  (-extract [it]
+    (try (deref it)
+         (catch java.util.concurrent.ExecutionException e
+           (throw (.getCause e))))))
 
 (def ^:no-doc context
   (reify
