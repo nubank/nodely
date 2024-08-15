@@ -1,6 +1,6 @@
 (ns nodely.engine.applicative.core
-  (:require
-   [nodely.engine.applicative.protocols :as p]))
+  (:refer-clojure :exclude [sequence])
+  (:require [nodely.engine.applicative.protocols :as p]))
 
 (defn throw-illegal-argument
   {:no-doc true :internal true}
