@@ -20,7 +20,6 @@
 
 (def ^:no-doc context
   (reify
-    protocols/Context
     protocols/RunNode
     (-apply-fn  [_ f mv]
       (pp/-map mv f))

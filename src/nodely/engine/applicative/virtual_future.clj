@@ -23,7 +23,6 @@
 
 (def context
   (reify
-    protocols/Context
     protocols/RunNode
     (-apply-fn  [_ f mv]
       (vfuture (f (deref-unwrapped mv))))

@@ -73,7 +73,6 @@
 
 (def ^:no-doc context
   (reify
-    protocols/Context
     protocols/RunNode
     (-apply-fn [_ f mv]
       (let [tags (::data/tags (meta f))]
