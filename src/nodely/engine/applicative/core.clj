@@ -10,12 +10,6 @@
 
 ;; CONTEXT STUFF HERE
 
-(defn context?
-  "Return `true` if the provided value satisfies
-  the Context protocol."
-  [v]
-  (satisfies? p/Context v))
-
 (defprotocol Contextual
   "Abstraction that establishes a concrete type as a member of a context.
 

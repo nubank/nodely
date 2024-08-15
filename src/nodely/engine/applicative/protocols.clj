@@ -21,9 +21,6 @@
   (-mreturn [m v])
   (-mbind [m mv f]))
 
-(defprotocol Context
-  "A marker protocol for identifying the valid context types.")
-
 (defprotocol Contextual
   "Abstraction that establishes a concrete type as a member of a context.
 
