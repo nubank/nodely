@@ -11,16 +11,9 @@
 
 (prefer-method pp/simple-dispatch clojure.lang.IPersistentMap clojure.lang.IDeref)
 
-;; sequenceA (x:xs) = (:) <$> x <*> sequenceA xs
-(defn sequence
-  [context chs]
-  (reduce (app/lift-a 2 conj) (app/pure context []) chs))
-
 (defn in-context?
   [x context]
-  (= context (protocols/-get-context x))
-  #_(and (satisfies? cats.protocols/Contextual x)
-       (= context (cats.protocols/-get-context x))))
+  (= context (protocols/-get-context x)))
 
 (declare eval-node)
 
@@ -31,7 +24,7 @@
                        (eval-node (::data/process-node node) lazy-env opts))
         mseq   (get lazy-env in-key)]
     (->> mseq
-         (app/fmap (comp (partial sequence context)
+         (app/fmap (comp (partial app/sequence context)
                          (partial map
                                   (comp (partial app/fapply mf)
                                         (partial app/pure context)))
@@ -43,11 +36,11 @@
   [{::data/keys [condition truthy falsey]}
    lazy-env
    opts]
-  (app/alet [condition-value-node (eval-node condition lazy-env opts)
-           result (if (::data/value condition-value-node)
-                    (eval-node truthy lazy-env opts)
-                    (eval-node falsey lazy-env opts))]
-          result))
+  (app/bind (eval-node condition lazy-env opts)
+            (fn [condition-value-node]
+              (if (:nodely.data/value condition-value-node)
+                (eval-node truthy lazy-env opts)
+                (eval-node falsey lazy-env opts)))))
 
 (defn noop-validate
   [return _]
@@ -60,7 +53,7 @@
         f         (with-meta (::data/fn leaf)
                     {::data/tags tags})]
     (app/mlet [v (app/apply-fn f (app/fmap #(core/prepare-inputs deps-keys (zipmap deps-keys %))
-                                             (sequence context (mapv #(get lazy-env %) deps-keys))))]
+                                             (app/sequence context (mapv #(get lazy-env %) deps-keys))))]
             (if (in-context? v context)
               (app/fmap data/value v)
               (app/pure context (data/value v))))))
