@@ -1,7 +1,6 @@
 (ns nodely.engine.applicative.core
-  (:require
-   [clojure.set :as set]
-   [nodely.engine.applicative.protocols :as p]))
+  (:require [clojure.set :as set]
+            [nodely.engine.applicative.protocols :as p]))
 
 (defn throw-illegal-argument
   {:no-doc true :internal true}
@@ -343,3 +342,57 @@
                   ~@body)
                 ~@(map second bindings))
          (alet* batches env body))))
+
+(defn- arglists
+  [var]
+  (get (meta var) :arglists))
+
+(defn- single-arity?
+  [var]
+  (let [args (arglists var)]
+    (and (= (count args) 1)
+         (not (some #{'&} (first args))))))
+
+(defn- arity
+  [var]
+  {:pre [(single-arity? var)]}
+  (count (first (arglists var))))
+
+(defmacro lift-a
+  "Lift a function with a given fixed arity to an applicative context.
+
+         (def app+ (lift-a 2 +))
+
+         (app+ (maybe/just 1) (maybe/just 2))
+         ;; => <Just 3>
+
+         (app+ (maybe/just 1) (maybe/nothing))
+         ;; => <Nothing>
+
+         (app+ [0 2 4] [1 2])
+         ;; => [1 2 3 4 5 6]
+     "
+  ([f]
+   (if (not (symbol? f))
+     (throw (IllegalArgumentException.
+             "You must provide an arity for lifting anonymous functions"))
+     (let [fvar (resolve f)]
+       (if-let [args (arglists fvar)]
+         (if (single-arity? fvar)
+           `(lift-a ~(arity fvar) ~f)
+           (throw (IllegalArgumentException.
+                   "The given function is either variadic or has multiple arities, provide an arity for lifting.")))
+         (throw (IllegalArgumentException.
+                 "The given function doesn't have arity metadata, provide an arity for lifting."))))))
+  ([n f]
+   (let [val-syms (repeatedly n gensym)
+         mval-syms (repeatedly n gensym)
+         bindings (interleave val-syms mval-syms)]
+     `(fn [~@mval-syms]
+        (alet [~@bindings]
+          (~f ~@val-syms))))))
+
+(defn apply-fn
+  [f mv]
+  (let [ctx (infer mv)]
+    (p/-apply-fn ctx f mv)))

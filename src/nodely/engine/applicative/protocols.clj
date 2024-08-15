@@ -1,14 +1,7 @@
-(ns nodely.engine.applicative.protocols
-  (:require
-   [cats.context :as context]))
+(ns nodely.engine.applicative.protocols)
 
 (defprotocol RunNode
   (-apply-fn [ctx f mv]))
-
-(defn apply-fn
-  [f mv]
-  (let [ctx (context/infer mv)]
-    (-apply-fn ctx f mv)))
 
 (defprotocol Functor
   "A data type that can be mapped over without altering its context."
@@ -38,3 +31,8 @@
   this abstraction to establish that Just is part of
   the Maybe monad."
   (-get-context [_] "Get the context associated with the type."))
+
+(defprotocol Extract
+  "A type class to extract the
+  value from a monad context."
+  (-extract [mv] "Extract the value from monad context."))

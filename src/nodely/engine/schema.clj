@@ -1,7 +1,7 @@
 (ns nodely.engine.schema
   (:require
-   [cats.core :as m]
    [nodely.data :as data]
+   [nodely.engine.applicative.core :as app]
    [schema.core :as s]))
 
 (defn validate
@@ -13,4 +13,4 @@
 
 (defn fvalidate
   [return node]
-  (m/fmap #(validate node %) return))
+  (app/fmap #(validate node %) return))
