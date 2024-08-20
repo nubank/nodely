@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.19.0 / 2024-08-15
+- Remove applicative engine dependency from funcool/cats
+
 ## 1.18.1 / 2024-07-16
 - Fix virtual-future applicative engine error handling so that ExecutionExceptions are always unwrapped
 - Improve ergonomics when an unknown engine is specified

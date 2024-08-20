@@ -1,6 +1,5 @@
 (ns nodely.engine.applicative.virtual-future
   (:require
-   [cats.protocols :as mp]
    [nodely.engine.applicative.protocols :as protocols]
    [nodely.engine.virtual-future :as virtual-future :refer [vfuture]])
   (:import
@@ -15,25 +14,24 @@
          (throw (.getCause e)))))
 
 (extend-type GreenFuture
-  mp/Contextual
+  protocols/Contextual
   (-get-context [_] context)
 
-  mp/Extract
+  protocols/Extract
   (-extract [it]
     (deref-unwrapped it)))
 
 (def context
   (reify
-    mp/Context
     protocols/RunNode
     (-apply-fn  [_ f mv]
       (vfuture (f (deref-unwrapped mv))))
 
-    mp/Functor
+    protocols/Functor
     (-fmap [mn f mv]
       (vfuture (f (deref-unwrapped mv))))
 
-    mp/Monad
+    protocols/Monad
     (-mreturn [_ v]
       (vfuture v))
 
@@ -41,7 +39,7 @@
       (vfuture (let [v (deref-unwrapped mv)]
                  (deref-unwrapped (f v)))))
 
-    mp/Applicative
+    protocols/Applicative
     (-pure [_ v]
       (vfuture v))
 

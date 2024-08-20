@@ -1,6 +1,5 @@
 (ns nodely.engine.applicative.core-async
   (:require
-   [cats.protocols :as mp]
    [clojure.core.async :as async]
    [clojure.core.async.impl.channels :as impl]
    [nodely.data :as data]
@@ -37,10 +36,10 @@
   `(handle-read-value (async/<! ~ch)))
 
 (extend-type ManyToManyChannel
-  mp/Contextual
+  protocols/Contextual
   (-get-context [_] context)
 
-  mp/Extract
+  protocols/Extract
   (-extract [it] (handle-read-value (async/<!! it))))
 
 (defn promise-of
@@ -74,7 +73,6 @@
 
 (def ^:no-doc context
   (reify
-    mp/Context
     protocols/RunNode
     (-apply-fn [_ f mv]
       (let [tags (::data/tags (meta f))]
@@ -91,12 +89,12 @@
               :else
               (go-future (let [v (<? mv)]
                            (f v))))))
-    mp/Functor
+    protocols/Functor
     (-fmap [mn f mv]
       (go-future (let [v (<? mv)]
                    (f v))))
 
-    mp/Monad
+    protocols/Monad
     (-mreturn [_ v]
       (promise-of v))
 
@@ -105,13 +103,12 @@
       (go-future (let [v (<? mv)]
                    (<? (f v)))))
 
-    mp/Applicative
+    protocols/Applicative
     (-pure [ctx v] ;;good
       (promise-of v))
 
     ;; Returns only one v, doesn't behave promise-like
-
-    (-fapply [_ pf pv] ;; good??
+    (-fapply [_ pf pv]
       (go-future (let [f (<? pf)
                        v (<? pv)]
                    (f v))))))
