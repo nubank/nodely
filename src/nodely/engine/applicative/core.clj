@@ -27,11 +27,12 @@
   is returned as is without any inference operation."
   {:no-doc true}
   [v]
-  (if-let [context (p/-get-context v)]
-    context
-    (throw-illegal-argument
-     (str "No context is set and it can not be automatically "
-          "resolved from provided value"))))
+  (or
+   (when (nil? v) v)
+   (p/-get-context v)
+   (throw-illegal-argument
+    (str "No context is set and it can not be automatically "
+         "resolved from provided value"))))
 
 ;; END CONTEXT STUFF
 
