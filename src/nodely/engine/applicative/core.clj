@@ -22,17 +22,20 @@
   java.lang.Object
   (-get-context [_] nil))
 
+(extend-protocol p/Contextual
+  nil
+  (-get-context [_] nil))
+
 (defn infer
   "Given an optional value infer its context. If context is already set, it
   is returned as is without any inference operation."
   {:no-doc true}
   [v]
-  (or
-   (when (nil? v) v)
-   (p/-get-context v)
-   (throw-illegal-argument
-    (str "No context is set and it can not be automatically "
-         "resolved from provided value"))))
+  (if-let [context (p/-get-context v)]
+    context
+    (throw-illegal-argument
+     (str "No context is set and it can not be automatically "
+          "resolved from provided value"))))
 
 ;; END CONTEXT STUFF
 
