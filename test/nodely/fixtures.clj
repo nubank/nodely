@@ -22,8 +22,10 @@
 
 (defn leaf-gen
   [env]
-  (gen/let [inputs (subset (keys env))]
-    (data/leaf inputs identity)))
+  (gen/let [inputs (subset (keys env))
+            f (gen/frequency [[1 (gen/return (constantly nil))]
+                              [9 (gen/return identity)]])]
+    (data/leaf inputs f)))
 
 (defn scalar-gen
   [env]
