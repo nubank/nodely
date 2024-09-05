@@ -41,6 +41,11 @@
                            :i (blocking (>leaf (do (Thread/sleep 1000) :i)))
                            :z (>leaf (into #{} [?a ?b ?c ?d ?e ?f ?g ?h ?i]))})
 
+(def env+channel-leaf {:a (>value 1)
+                       :b (api/>channel-leaf
+                           (async/go (+ ?a 5)))
+                       :c (>leaf (+ ?a ?b))})
+
 (def parallel-engines
   #{:core-async.lazy-scheduling
     :core-async.iterative-scheduling
@@ -102,7 +107,10 @@
     (t/testing "handling nested exceptions"
       (t/matching #"Oops!"
                   (try (api/eval-key exceptions-all-the-way-down :d {::api/engine engine-key})
-                       (catch clojure.lang.ExceptionInfo e (ex-message e)))))))
+                       (catch clojure.lang.ExceptionInfo e (ex-message e)))))
+
+    (t/testing "env with >channel-leaf"
+      (t/matching 7 (api/eval-key env+channel-leaf :c {::api/engine engine-key})))))
 
 (t/deftest api-test
   (for [engine (set/difference (set (keys api/engine-data))

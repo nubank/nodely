@@ -3,12 +3,11 @@
   (:require
    [nodely.data]
    [nodely.engine.applicative :as applicative]
-
    [nodely.engine.applicative.promesa :as applicative.promesa] ;; promesa
    [nodely.engine.core :as engine-core]
    [nodely.engine.lazy]
    [nodely.engine.manifold]
-   [nodely.syntax]
+   [nodely.syntax :as syntax]
    [nodely.vendor.potemkin :refer [import-fn import-vars]]))
 
 (import-vars nodely.syntax/>cond
@@ -19,7 +18,6 @@
              nodely.syntax/>value
              nodely.syntax/>sequence
              nodely.syntax/blocking
-             nodely.engine.core-async.core/>channel-leaf
              nodely.data/value
              nodely.data/leaf
              nodely.data/sequence
@@ -29,7 +27,6 @@
 (import-fn nodely.engine.lazy/eval-node-with-values eval-node-with-values)
 (import-fn nodely.data/merge-values merge-values)
 (import-fn nodely.data/get-value get-value)
-
 
 (def virtual-future-failure
   (delay
@@ -44,10 +41,11 @@
 
 (def core-async-failure
   (delay
-    (try (require '[nodely.engine.applicative.core-async :as applicative.core-async]
-                  '[nodely.engine.core-async.core]
-                  '[nodely.engine.core-async.iterative-scheduling]
-                  '[nodely.engine.core-async.lazy-scheduling])
+    (try (do (require '[nodely.engine.applicative.core-async :as applicative.core-async]
+                      '[nodely.engine.core-async.core]
+                      '[nodely.engine.core-async.iterative-scheduling]
+                      '[nodely.engine.core-async.lazy-scheduling])
+             (import-vars))
          (catch Exception e
            {:msg                   "Could not locate core-async on classpath."
             ::error                :missing-ns
@@ -56,9 +54,11 @@
                                      nodely.engine.core-async.lazy-scheduling]
             :cause                 e}))))
 
-(defn manifold-failure)
+(defn manifold-failure
+  [])
 
-(defn promesa-failure)
+(defn promesa-failure
+  [])
 
 (def engine-data
   {:core-async.lazy-scheduling      {::ns-name          'nodely.engine.core-async.lazy-scheduling
@@ -70,12 +70,14 @@
                                      ::enable-deref     core-async-failure}
    :async.manifold                  {::ns-name          'nodely.engine.manifold
                                      ::opts-fn          (constantly nil)
-                                     ::enable-deref     (atom nil)}
+                                     ::enable-deref     (delay nil)}
    :applicative.promesa             {::ns-name          'nodely.engine.applicative
-                                     ::opts-fn          #(assoc % ::applicative/context applicative.promesa/context)
-                                     ::enable-deref     (atom nil)}
+                                     ::opts-fn          #(assoc % ::applicative/context
+                                                                (var-get (resolve 'nodely.engine.applicative.promesa/context)))
+                                     ::enable-deref     (delay nil)}
    :applicative.core-async          {::ns-name          'nodely.engine.applicative
-                                     ::opts-fn          #(assoc % ::applicative/context applicative.core-async/context)
+                                     ::opts-fn          #(assoc % ::applicative/context
+                                                                (var-get (resolve 'nodely.engine.applicative.core-async/context)))
                                      ::eval-key-channel true
                                      ::enable-deref     core-async-failure}
    :sync.lazy                       {::ns-name          'nodely.engine.lazy
@@ -90,19 +92,31 @@
                                      ::opts-fn          #(assoc % ::applicative/context
                                                                 (var-get (resolve 'nodely.engine.applicative.virtual-future/context)))
                                      ::eval-key-channel true
-                                     ::enable-deref     virtual-future-failure}
-   })
+                                     ::enable-deref     virtual-future-failure}})
+
+(defmacro >channel-leaf
+  [expr]
+  (let [symbols-to-be-replaced (#'syntax/question-mark-symbols expr)
+        fn-expr                (#'syntax/fn-with-arg-map symbols-to-be-replaced expr)]
+    (if-let [{:keys [msg cause] :as enable-failure} @core-async-failure]
+      (throw (ex-info msg (dissoc enable-failure :msg :cause) cause))
+      (list `nodely.engine.core-async.core/channel-leaf
+          (mapv #'syntax/question-mark->keyword symbols-to-be-replaced)
+          fn-expr))))
 
 (defn- engine-fn
   [engine-name use]
-  (let [engine-data (engine-data engine-name)]
+  (if-let [engine-data (engine-data engine-name)]
     (if-let [{:keys [msg cause] :as enable-failure} @(::enable-deref engine-data)]
       (throw (ex-info msg
                       (-> enable-failure
                           (dissoc :msg :cause)
                           (assoc ::specified-engine-name engine-name))
                       cause))
-      (ns-resolve (find-ns (::ns-name engine-data)) use))))
+      (ns-resolve (find-ns (::ns-name engine-data)) use))
+    (throw (ex-info "Unsupported engine specified, please specify a supported engine."
+                    {:specified-engine-name engine-name
+                     :supported-engine-names (set (keys engine-data))}))))
 
 (def engine-fn (memoize engine-fn))
 
