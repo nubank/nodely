@@ -3,10 +3,8 @@
   (:require
    [nodely.data]
    [nodely.engine.applicative :as applicative]
-   [nodely.engine.applicative.promesa :as applicative.promesa] ;; promesa
    [nodely.engine.core :as engine-core]
    [nodely.engine.lazy]
-   [nodely.engine.manifold]
    [nodely.syntax :as syntax]
    [nodely.vendor.potemkin :refer [import-fn import-vars]]))
 
@@ -44,8 +42,7 @@
     (try (do (require '[nodely.engine.applicative.core-async :as applicative.core-async]
                       '[nodely.engine.core-async.core]
                       '[nodely.engine.core-async.iterative-scheduling]
-                      '[nodely.engine.core-async.lazy-scheduling])
-             (import-vars))
+                      '[nodely.engine.core-async.lazy-scheduling]))
          (catch Exception e
            {:msg                   "Could not locate core-async on classpath."
             ::error                :missing-ns
@@ -54,11 +51,23 @@
                                      nodely.engine.core-async.lazy-scheduling]
             :cause                 e}))))
 
-(defn manifold-failure
-  [])
+(def manifold-failure
+  (delay
+    (try (require '[nodely.engine.manifold])
+         (catch Exception e
+           {:msg                   "Could not locate manifold on classpath."
+            ::error                :missing-ns
+            ::requested-namespaces '[nodely.engine.manifold]
+            :cause                 e}))))
 
-(defn promesa-failure
-  [])
+(def promesa-failure
+  (delay
+    (try (require '[nodely.engine.applicative.promesa :as applicative.promesa])
+         (catch Exception e
+           {:msg                   "Could not locate promesa on classpath."
+            ::error                :missing-ns
+            ::requested-namespaces '[nodely.engine.applicative.promesa :as applicative.promesa]
+            :cause                 e}))))
 
 (def engine-data
   {:core-async.lazy-scheduling      {::ns-name          'nodely.engine.core-async.lazy-scheduling
@@ -70,11 +79,11 @@
                                      ::enable-deref     core-async-failure}
    :async.manifold                  {::ns-name          'nodely.engine.manifold
                                      ::opts-fn          (constantly nil)
-                                     ::enable-deref     (delay nil)}
+                                     ::enable-deref     manifold-failure}
    :applicative.promesa             {::ns-name          'nodely.engine.applicative
                                      ::opts-fn          #(assoc % ::applicative/context
                                                                 (var-get (resolve 'nodely.engine.applicative.promesa/context)))
-                                     ::enable-deref     (delay nil)}
+                                     ::enable-deref     promesa-failure}
    :applicative.core-async          {::ns-name          'nodely.engine.applicative
                                      ::opts-fn          #(assoc % ::applicative/context
                                                                 (var-get (resolve 'nodely.engine.applicative.core-async/context)))
