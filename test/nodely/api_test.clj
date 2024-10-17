@@ -195,10 +195,14 @@
       (t/matching 7 (api/eval-key env+channel-leaf :c {::api/engine engine-key})))))
 
 (t/deftest api-test
-  (for [engine (set/difference (set (keys api/engine-data))
-                               #{:core-async.iterative-scheduling
-                                 :async.virtual-futures})]
-    (engine-test-suite engine)))
+  (let [remove-keys (conj #{:core-async.iterative-scheduling
+                            :async.virtual-futures}
+                          (when  (try (import java.util.concurrent.ThreadPerTaskExecutor)
+                                      (catch Throwable t t))
+                            :applicative.virtual-future))]
+    (for [engine (set/difference (set (keys api/engine-data))
+                                 remove-keys)]
+      (engine-test-suite engine))))
 
 (t/deftest incorrect-engine-id
   (t/testing "we communicate how the client has specified an invalid input and what would be valid inputs"
