@@ -80,13 +80,13 @@
 
 (defmacro testing-require-delay
   [ns-sym delay message cause & body]
-  `(testing-require-delay-call ~ns-sym (quote ~delay)
+  `(testing-require-delay-call (quote ~ns-sym) (quote ~delay)
                                ~message ~cause (^{:once true} fn* [] ~@body)))
 
 (t/deftest engine-without-support
   (t/testing "engines blowing up"
     (testing-require-delay
-        'nodely.engine.virtual-workers nodely.api.v0/virtual-future-failure
+        nodely.engine.virtual-workers nodely.api.v0/virtual-future-failure
         "Kaboom! We're not on JVM 21 for pretend" :test-virtual-future-failure
         (t/testing "without virtual futures in the JVM"
           (t/testing "attempting to use virtual futures"
@@ -100,7 +100,7 @@
              5
              (async/<!! (api/eval-key-channel env :z {::api/engine :core-async.lazy-scheduling}))))))
     (testing-require-delay
-        'nodely.engine.core-async.core nodely.api.v0/core-async-failure
+        nodely.engine.core-async.core nodely.api.v0/core-async-failure
         "Kaboom! We don't have core.async for pretend" :test-core-async-failure
       (t/testing "without core.async on the classpath"
         (t/testing "attempting to use core.async"
@@ -114,7 +114,7 @@
            5
            (api/eval-key env :z {::api/engine :async.manifold})))))
     (testing-require-delay
-        'nodely.engine.manifold nodely.api.v0/manifold-failure
+        nodely.engine.manifold nodely.api.v0/manifold-failure
         "Kaboom! We don't have manifold for pretend" :test-manifold-failure
       (t/testing "without manifold on the classpath"
         (t/testing "attempting to use manifold"
@@ -128,7 +128,7 @@
            5
            (async/<!! (api/eval-key-channel env :z {::api/engine :core-async.lazy-scheduling}))))))
     (testing-require-delay
-        'nodely.engine.applicative.promesa nodely.api.v0/promesa-failure
+        nodely.engine.applicative.promesa nodely.api.v0/promesa-failure
         "Kaboom! We don't have promesa for pretend" :test-promesa-failure
       (t/testing "attempting to use promesa without promesa on the classpath"
         (t/testing "attempting to use promesa"
