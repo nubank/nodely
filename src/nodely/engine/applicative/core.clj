@@ -22,6 +22,10 @@
   java.lang.Object
   (-get-context [_] nil))
 
+(extend-protocol p/Contextual
+  nil
+  (-get-context [_] nil))
+
 (defn infer
   "Given an optional value infer its context. If context is already set, it
   is returned as is without any inference operation."

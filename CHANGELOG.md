@@ -10,6 +10,9 @@
    these libraries on their classpath explicitly, or, transitively
    include them through some other library.
 
+## 1.19.1 / 2024-08-28
+- Fix Contextual protocol to accept nil context cases
+
 ## 1.19.0 / 2024-08-15
 - Remove applicative engine dependency from funcool/cats
 
