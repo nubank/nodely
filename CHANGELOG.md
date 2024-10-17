@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.0.0 / 2024-10-17
+- Breaking change: removed transitive dependencies
+-- The following dependencies are no longer transitively provided,
+   but, if otherwise made available on the classpath will continue to be
+   supported: org.clojure/core.async, funcool/promesa, manifold
+-- No code changes are required, but, if using an engine that is
+   powered by one of these libraries, then clients must include
+   these libraries on their classpath explicitly, or, transitively
+   include them through some other library.
+
 ## 1.19.0 / 2024-08-15
 - Remove applicative engine dependency from funcool/cats
 
