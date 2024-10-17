@@ -74,7 +74,7 @@
                                              {:cause cause}))
                              (apply orig-require args)))
             res          (with-redefs [require bomb]
-                            (call-fn))]
+                           (call-fn))]
         (require :reload 'nodely.api.v0)
         res)))
 
@@ -86,61 +86,61 @@
 (t/deftest engine-without-support
   (t/testing "engines blowing up"
     (testing-require-delay
-        nodely.engine.virtual-workers nodely.api.v0/virtual-future-failure
-        "Kaboom! We're not on JVM 21 for pretend" :test-virtual-future-failure
-        (t/testing "without virtual futures in the JVM"
-          (t/testing "attempting to use virtual futures"
-            (t/matching
-             #"Classloader could not locate `java.util.concurrent.ThreadPerTaskExecutor`"
-             (try (api/eval-key-channel env :z {::api/engine :applicative.virtual-future})
-                  (catch Throwable t
-                    (ex-message t)))))
-          (t/testing "attempting to use core.async"
-            (t/matching
-             5
-             (async/<!! (api/eval-key-channel env :z {::api/engine :core-async.lazy-scheduling}))))))
+     nodely.engine.virtual-workers nodely.api.v0/virtual-future-failure
+     "Kaboom! We're not on JVM 21 for pretend" :test-virtual-future-failure
+     (t/testing "without virtual futures in the JVM"
+       (t/testing "attempting to use virtual futures"
+         (t/matching
+          #"Classloader could not locate `java.util.concurrent.ThreadPerTaskExecutor`"
+          (try (api/eval-key-channel env :z {::api/engine :applicative.virtual-future})
+               (catch Throwable t
+                 (ex-message t)))))
+       (t/testing "attempting to use core.async"
+         (t/matching
+          5
+          (async/<!! (api/eval-key-channel env :z {::api/engine :core-async.lazy-scheduling}))))))
     (testing-require-delay
-        nodely.engine.core-async.core nodely.api.v0/core-async-failure
-        "Kaboom! We don't have core.async for pretend" :test-core-async-failure
-      (t/testing "without core.async on the classpath"
-        (t/testing "attempting to use core.async"
-          (t/matching
-           #"Could not locate core-async on classpath"
-           (try (api/eval-key-channel env :z {::api/engine :core-async.lazy-scheduling})
-                (catch Throwable t
-                  (ex-message t)))))
-        (t/testing "attempting to use manifold"
-          (t/matching
-           5
-           (api/eval-key env :z {::api/engine :async.manifold})))))
+     nodely.engine.core-async.core nodely.api.v0/core-async-failure
+     "Kaboom! We don't have core.async for pretend" :test-core-async-failure
+     (t/testing "without core.async on the classpath"
+       (t/testing "attempting to use core.async"
+         (t/matching
+          #"Could not locate core-async on classpath"
+          (try (api/eval-key-channel env :z {::api/engine :core-async.lazy-scheduling})
+               (catch Throwable t
+                 (ex-message t)))))
+       (t/testing "attempting to use manifold"
+         (t/matching
+          5
+          (api/eval-key env :z {::api/engine :async.manifold})))))
     (testing-require-delay
-        nodely.engine.manifold nodely.api.v0/manifold-failure
-        "Kaboom! We don't have manifold for pretend" :test-manifold-failure
-      (t/testing "without manifold on the classpath"
-        (t/testing "attempting to use manifold"
-          (t/matching
-           #"Could not locate manifold on classpath"
-           (try (api/eval-key-channel env :z {::api/engine :async.manifold})
-                (catch Throwable t
-                  (ex-message t)))))
-        (t/testing "attempting to use core.async"
-          (t/matching
-           5
-           (async/<!! (api/eval-key-channel env :z {::api/engine :core-async.lazy-scheduling}))))))
+     nodely.engine.manifold nodely.api.v0/manifold-failure
+     "Kaboom! We don't have manifold for pretend" :test-manifold-failure
+     (t/testing "without manifold on the classpath"
+       (t/testing "attempting to use manifold"
+         (t/matching
+          #"Could not locate manifold on classpath"
+          (try (api/eval-key-channel env :z {::api/engine :async.manifold})
+               (catch Throwable t
+                 (ex-message t)))))
+       (t/testing "attempting to use core.async"
+         (t/matching
+          5
+          (async/<!! (api/eval-key-channel env :z {::api/engine :core-async.lazy-scheduling}))))))
     (testing-require-delay
-        nodely.engine.applicative.promesa nodely.api.v0/promesa-failure
-        "Kaboom! We don't have promesa for pretend" :test-promesa-failure
-      (t/testing "attempting to use promesa without promesa on the classpath"
-        (t/testing "attempting to use promesa"
-          (t/matching
-           #"Could not locate promesa on classpath"
-           (try (api/eval-key-channel env :z {::api/engine :applicative.promesa})
-                (catch Throwable t
-                  (ex-message t)))))
-        (t/testing "attempting to use core.async"
-          (t/matching
-           5
-           (async/<!! (api/eval-key-channel env :z {::api/engine :core-async.lazy-scheduling}))))))))
+     nodely.engine.applicative.promesa nodely.api.v0/promesa-failure
+     "Kaboom! We don't have promesa for pretend" :test-promesa-failure
+     (t/testing "attempting to use promesa without promesa on the classpath"
+       (t/testing "attempting to use promesa"
+         (t/matching
+          #"Could not locate promesa on classpath"
+          (try (api/eval-key-channel env :z {::api/engine :applicative.promesa})
+               (catch Throwable t
+                 (ex-message t)))))
+       (t/testing "attempting to use core.async"
+         (t/matching
+          5
+          (async/<!! (api/eval-key-channel env :z {::api/engine :core-async.lazy-scheduling}))))))))
 
 (defn engine-test-suite
   [engine-key]
