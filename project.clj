@@ -1,4 +1,4 @@
-(defproject dev.nu/nodely "1.19.1"
+(defproject dev.nu/nodely "2.0.0"
   :description "Decoupling data fetching from data dependency declaration"
   :url "https://github.com/nubank/nodely"
   :license {:name "MIT"}
@@ -8,9 +8,9 @@
 
   :dependencies [[org.clojure/clojure "1.10.3"]
                  [aysylu/loom "1.0.2"]
-                 [org.clojure/core.async "1.5.648"]
-                 [funcool/promesa "10.0.594"]
-                 [manifold "0.1.9-alpha5"]
+                 [org.clojure/core.async "1.5.648" :scope "provided"]
+                 [funcool/promesa "10.0.594" :scope "provided"]
+                 [manifold "0.1.9-alpha5" :scope "provided"]
                  [prismatic/schema "1.1.12"]]
 
   :exclusions [log4j]

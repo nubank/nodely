@@ -41,6 +41,11 @@
                            :i (blocking (>leaf (do (Thread/sleep 1000) :i)))
                            :z (>leaf (into #{} [?a ?b ?c ?d ?e ?f ?g ?h ?i]))})
 
+(def env+channel-leaf {:a (>value 1)
+                       :b (api/>channel-leaf
+                           (async/go (+ ?a 5)))
+                       :c (>leaf (+ ?a ?b))})
+
 (def parallel-engines
   #{:core-async.lazy-scheduling
     :core-async.iterative-scheduling
@@ -54,10 +59,92 @@
   [engine-key]
   (get-in api/engine-data [engine-key ::api/eval-key-channel]))
 
+(defn ensure-unrealized-delay
+  [sym]
+  (when (realized? (deref (resolve sym)))
+    (require :reload '[nodely.api.v0])))
+
+(defn- testing-require-delay-call
+  [ns-sym delay message cause call-fn]
+  (do (ensure-unrealized-delay delay)
+      (let [orig-require require
+            bomb         (fn [& args]
+                           (if ((set args) ns-sym)
+                             (throw (ex-info message
+                                             {:cause cause}))
+                             (apply orig-require args)))
+            res          (with-redefs [require bomb]
+                           (call-fn))]
+        (require :reload 'nodely.api.v0)
+        res)))
+
+(defmacro testing-require-delay
+  [ns-sym delay message cause & body]
+  `(testing-require-delay-call (quote ~ns-sym) (quote ~delay)
+                               ~message ~cause (^{:once true} fn* [] ~@body)))
+
+(t/deftest engine-without-support
+  (t/testing "engines blowing up"
+    (testing-require-delay
+     nodely.engine.virtual-workers nodely.api.v0/virtual-future-failure
+     "Kaboom! We're not on JVM 21 for pretend" :test-virtual-future-failure
+     (t/testing "without virtual futures in the JVM"
+       (t/testing "attempting to use virtual futures"
+         (t/matching
+          #"Classloader could not locate `java.util.concurrent.ThreadPerTaskExecutor`"
+          (try (api/eval-key-channel env :z {::api/engine :applicative.virtual-future})
+               (catch Throwable t
+                 (ex-message t)))))
+       (t/testing "attempting to use core.async"
+         (t/matching
+          5
+          (async/<!! (api/eval-key-channel env :z {::api/engine :core-async.lazy-scheduling}))))))
+    (testing-require-delay
+     nodely.engine.core-async.core nodely.api.v0/core-async-failure
+     "Kaboom! We don't have core.async for pretend" :test-core-async-failure
+     (t/testing "without core.async on the classpath"
+       (t/testing "attempting to use core.async"
+         (t/matching
+          #"Could not locate core-async on classpath"
+          (try (api/eval-key-channel env :z {::api/engine :core-async.lazy-scheduling})
+               (catch Throwable t
+                 (ex-message t)))))
+       (t/testing "attempting to use manifold"
+         (t/matching
+          5
+          (api/eval-key env :z {::api/engine :async.manifold})))))
+    (testing-require-delay
+     nodely.engine.manifold nodely.api.v0/manifold-failure
+     "Kaboom! We don't have manifold for pretend" :test-manifold-failure
+     (t/testing "without manifold on the classpath"
+       (t/testing "attempting to use manifold"
+         (t/matching
+          #"Could not locate manifold on classpath"
+          (try (api/eval-key-channel env :z {::api/engine :async.manifold})
+               (catch Throwable t
+                 (ex-message t)))))
+       (t/testing "attempting to use core.async"
+         (t/matching
+          5
+          (async/<!! (api/eval-key-channel env :z {::api/engine :core-async.lazy-scheduling}))))))
+    (testing-require-delay
+     nodely.engine.applicative.promesa nodely.api.v0/promesa-failure
+     "Kaboom! We don't have promesa for pretend" :test-promesa-failure
+     (t/testing "attempting to use promesa without promesa on the classpath"
+       (t/testing "attempting to use promesa"
+         (t/matching
+          #"Could not locate promesa on classpath"
+          (try (api/eval-key-channel env :z {::api/engine :applicative.promesa})
+               (catch Throwable t
+                 (ex-message t)))))
+       (t/testing "attempting to use core.async"
+         (t/matching
+          5
+          (async/<!! (api/eval-key-channel env :z {::api/engine :core-async.lazy-scheduling}))))))))
+
 (defn engine-test-suite
   [engine-key]
   (t/testing (name engine-key)
-
     (when (channel-interface engine-key)
       (t/testing "eval-*-channel-test"
         (t/testing "returning a result to a channel with each engine"
@@ -102,13 +189,20 @@
     (t/testing "handling nested exceptions"
       (t/matching #"Oops!"
                   (try (api/eval-key exceptions-all-the-way-down :d {::api/engine engine-key})
-                       (catch clojure.lang.ExceptionInfo e (ex-message e)))))))
+                       (catch clojure.lang.ExceptionInfo e (ex-message e)))))
+
+    (t/testing "env with >channel-leaf"
+      (t/matching 7 (api/eval-key env+channel-leaf :c {::api/engine engine-key})))))
 
 (t/deftest api-test
-  (for [engine (set/difference (set (keys api/engine-data))
-                               #{:core-async.iterative-scheduling
-                                 :async.virtual-futures})]
-    (engine-test-suite engine)))
+  (let [remove-keys (conj #{:core-async.iterative-scheduling
+                            :async.virtual-futures}
+                          (when  (try (import java.util.concurrent.ThreadPerTaskExecutor)
+                                      (catch Throwable t t))
+                            :applicative.virtual-future))]
+    (for [engine (set/difference (set (keys api/engine-data))
+                                 remove-keys)]
+      (engine-test-suite engine))))
 
 (t/deftest incorrect-engine-id
   (t/testing "we communicate how the client has specified an invalid input and what would be valid inputs"
