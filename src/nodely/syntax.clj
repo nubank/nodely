@@ -7,18 +7,18 @@
   [expr]
   (set (filter (complement seqable?) (tree-seq seqable? seq expr))))
 
+(defn- question-mark->keyword
+  [s]
+  (-> (str s) (subs 1) keyword))
+
 (defn- fn-with-arg-map
   [args expr]
   (let [arg-map (->> args
                      (map (fn [s]
-                            [s (-> s name (subs 1) keyword)]))
+                            [s (question-mark->keyword s)]))
                      (into {}))]
     (list `fn [(or (not-empty arg-map) '_)]
           expr)))
-
-(defn- question-mark->keyword
-  [s]
-  (-> (name s) (subs 1) keyword))
 
 (defn- question-mark-symbols
   [expr]
@@ -49,7 +49,7 @@
   [expr]
   (let [symbols-to-be-replaced (question-mark-symbols expr)]
     (assert-not-shadowing! symbols-to-be-replaced)
-    (list `data/leaf (mapv (comp keyword #(subs % 1) name) symbols-to-be-replaced)
+    (list `data/leaf (mapv question-mark->keyword symbols-to-be-replaced)
           (fn-with-arg-map symbols-to-be-replaced expr))))
 
 (defn >and
