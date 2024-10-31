@@ -208,3 +208,13 @@
   (testing "Flags a node with the blocking tag"
     (is (match? #::data{:type :leaf :inputs #{:x :y} :fn ifn? :tags #{::data/blocking}}
                 (blocking (>leaf (+ ?x ?y)))))))
+
+(deftest namespaced-question-mark-symbols
+  (testing "Can make leafs with question mark namespaced symbols"
+    (is (match? #::data{:type :leaf :inputs #{:foo/bar :baz/quux} :fn ifn?}
+                (>leaf (+ ?foo/bar ?baz/quux))))
+    (is (match? #::data{:type :sequence
+                        :input :foo/bar
+                        :process-node #::data{:type :value
+                                              :value ifn?}}
+                (>sequence inc ?foo/bar)))))

@@ -1,6 +1,8 @@
 (ns nodely.syntax
   (:require
    [clojure.string :as string]
+   [clojure.set :as set]
+   [clojure.walk :as walk]
    [nodely.data :as data]))
 
 (defn- expression-symbols
@@ -11,14 +13,30 @@
   [s]
   (-> (str s) (subs 1) keyword))
 
+(defn- hygienic-expr-and-args
+  [expr named-args]
+  (let [symbols-to-swap (filter namespace named-args)
+        gensyms (reduce (fn [m s] (assoc m s (gensym (name s)))) {} symbols-to-swap)]
+    (if (seq symbols-to-swap)
+      {:expr (walk/postwalk-replace gensyms expr)
+       :args (into (->> gensyms
+                        (map (fn [[k v]] [k [v (question-mark->keyword k)]]))
+                        (into {}))
+                   (->> (set/difference (set named-args)
+                                        (set symbols-to-swap))
+                        (map (fn [s] [s [s (question-mark->keyword s)]]))))}
+      {:expr expr
+       :args (fn [s] [s (question-mark->keyword s)])})))
+
 (defn- fn-with-arg-map
   [args expr]
-  (let [arg-map (->> args
-                     (map (fn [s]
-                            [s (question-mark->keyword s)]))
+  (let [{new-expr :expr
+         args-mapping :args} (hygienic-expr-and-args expr args)
+        arg-map (->> args
+                     (map args-mapping)
                      (into {}))]
     (list `fn [(or (not-empty arg-map) '_)]
-          expr)))
+          new-expr)))
 
 (defn- question-mark-symbols
   [expr]
