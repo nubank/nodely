@@ -1,7 +1,7 @@
 (ns nodely.syntax
   (:require
-   [clojure.string :as string]
    [clojure.set :as set]
+   [clojure.string :as string]
    [clojure.walk :as walk]
    [nodely.data :as data]))
 
