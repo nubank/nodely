@@ -1,24 +1,42 @@
 (ns nodely.syntax
   (:require
+   [clojure.set :as set]
    [clojure.string :as string]
+   [clojure.walk :as walk]
    [nodely.data :as data]))
 
 (defn- expression-symbols
   [expr]
   (set (filter (complement seqable?) (tree-seq seqable? seq expr))))
 
-(defn- fn-with-arg-map
-  [args expr]
-  (let [arg-map (->> args
-                     (map (fn [s]
-                            [s (-> s name (subs 1) keyword)]))
-                     (into {}))]
-    (list `fn [(or (not-empty arg-map) '_)]
-          expr)))
-
 (defn- question-mark->keyword
   [s]
-  (-> (name s) (subs 1) keyword))
+  (-> (str s) (subs 1) keyword))
+
+(defn- hygienic-expr-and-args
+  [expr named-args]
+  (let [symbols-to-swap (filter namespace named-args)
+        gensyms (reduce (fn [m s] (assoc m s (gensym (name s)))) {} symbols-to-swap)]
+    (if (seq symbols-to-swap)
+      {:expr (walk/postwalk-replace gensyms expr)
+       :args (into (->> gensyms
+                        (map (fn [[k v]] [k [v (question-mark->keyword k)]]))
+                        (into {}))
+                   (->> (set/difference (set named-args)
+                                        (set symbols-to-swap))
+                        (map (fn [s] [s [s (question-mark->keyword s)]]))))}
+      {:expr expr
+       :args (fn [s] [s (question-mark->keyword s)])})))
+
+(defn- fn-with-arg-map
+  [args expr]
+  (let [{new-expr :expr
+         args-mapping :args} (hygienic-expr-and-args expr args)
+        arg-map (->> args
+                     (map args-mapping)
+                     (into {}))]
+    (list `fn [(or (not-empty arg-map) '_)]
+          new-expr)))
 
 (defn- question-mark-symbols
   [expr]
@@ -49,7 +67,7 @@
   [expr]
   (let [symbols-to-be-replaced (question-mark-symbols expr)]
     (assert-not-shadowing! symbols-to-be-replaced)
-    (list `data/leaf (mapv (comp keyword #(subs % 1) name) symbols-to-be-replaced)
+    (list `data/leaf (mapv question-mark->keyword symbols-to-be-replaced)
           (fn-with-arg-map symbols-to-be-replaced expr))))
 
 (defn >and

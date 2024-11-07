@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.0.1 / 2024-11-07
+- Allow implicit args for nodely syntax macros (e.g. >leaf) to include namespaces in the implicit arg symbols.
+
 ## 2.0.0 / 2024-10-17
 - Breaking change: removed transitive dependencies
 -- The following dependencies are no longer transitively provided,
