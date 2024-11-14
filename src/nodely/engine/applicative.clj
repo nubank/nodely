@@ -5,7 +5,6 @@
    [clojure.pprint :as pp]
    [nodely.data :as data]
    [nodely.engine.applicative.core :as app]
-   [nodely.engine.applicative.promesa :as promesa]
    [nodely.engine.applicative.protocols :as protocols]
    [nodely.engine.core :as core]
    [nodely.engine.lazy-env :as lazy-env]))
@@ -75,37 +74,27 @@
     (validator node-ret node)))
 
 (defn eval-key
-  ([env k]
-   (eval-key env k {}))
-  ([env k opts]
-   (let [opts (merge {::context promesa/context} opts)
-         lazy-env (lazy-env/lazy-env env eval-in-context opts)]
-     (::data/value (protocols/-extract (get lazy-env k))))))
+  [env k opts]
+  (let [lazy-env (lazy-env/lazy-env env eval-in-context opts)]
+    (::data/value (protocols/-extract (get lazy-env k)))))
 
 (defn eval-key-contextual
-  ([env k]
-   (eval-key env k {}))
-  ([env k opts]
-   (let [opts (merge {::context promesa/context} opts)
-         lazy-env (lazy-env/lazy-env env eval-in-context opts)]
-     (app/fmap ::data/value (get lazy-env k)))))
+  [env k opts]
+  (let [lazy-env (lazy-env/lazy-env env eval-in-context opts)]
+    (app/fmap ::data/value (get lazy-env k))))
 
 (defn eval-key-channel
-  ([env k]
-   (eval-key-channel env k {}))
-  ([env k opts]
-   (let [contextual-v (eval-key-contextual env k opts)
-         chan         (async/promise-chan)]
-     (app/fmap (partial async/put! chan) contextual-v)
-     chan)))
+  [env k opts]
+  (let [contextual-v (eval-key-contextual env k opts)
+        chan         (async/promise-chan)]
+    (app/fmap (partial async/put! chan) contextual-v)
+    chan))
 
 (defn eval
-  ([env k]
-   (eval env k {::context promesa/context}))
-  ([env k opts]
-   (let [lazy-env (lazy-env/lazy-env env eval-in-context opts)]
-     (protocols/-extract (get lazy-env k)) ;; ensures k is resolved
-     (merge env
-            (reduce (fn [acc [k v]] (assoc acc k (protocols/-extract v)))
-                    {}
-                    (lazy-env/scheduled-nodes lazy-env))))))
+  [env k opts]
+  (let [lazy-env (lazy-env/lazy-env env eval-in-context opts)]
+    (protocols/-extract (get lazy-env k)) ;; ensures k is resolved
+    (merge env
+           (reduce (fn [acc [k v]] (assoc acc k (protocols/-extract v)))
+                   {}
+                   (lazy-env/scheduled-nodes lazy-env)))))
