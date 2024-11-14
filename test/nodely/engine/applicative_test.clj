@@ -124,13 +124,13 @@
 
 (deftest eval-key-test
   (testing "eval promise"
-    (is (match? 3 (applicative/eval-key test-env :c))))
+    (is (match? 3 (applicative/eval-key test-env :c {::applicative/context promesa/context}))))
   (testing "async works"
-    (let [[time-ns result] (criterium/time-body (applicative/eval-key test-env+delay :d))]
+    (let [[time-ns result] (criterium/time-body (applicative/eval-key test-env+delay :d {::applicative/context promesa/context}))]
       (is (match? {:a 3 :b 6 :c 9} result))
       (is (match? (matchers/within-delta 100000000 1000000000) time-ns))))
   (testing "tricky example"
-    (is (match? 4 (applicative/eval-key tricky-example :z)))))
+    (is (match? 4 (applicative/eval-key tricky-example :z {::applicative/context promesa/context})))))
 
 (deftest eval-key-test-core-async
   (testing "eval promise"
@@ -150,7 +150,7 @@
     (is (match? {:a {::data/value 2}
                  :b {::data/value 1}
                  :c {::data/value 3}}
-                (applicative/eval test-env :c))))
+                (applicative/eval test-env :c {::applicative/context promesa/context}))))
   (testing "tricky example"
     (is (match? {:x (data/value 1)
                  :y (data/value 2)
@@ -160,29 +160,29 @@
                  :w (data/value 4)
                  :z {::data/type :leaf
                      ::data/inputs #{:w}}}
-                (applicative/eval tricky-example :w)))))
+                (applicative/eval tricky-example :w {::applicative/context promesa/context})))))
 
 (deftest eval-env-with-sequence
   (testing "async response is equal to sync response"
     (is (match? (-> (core/resolve :b env-with-sequence) (get :b) ::data/value)
-                (applicative/eval-key env-with-sequence :b))))
+                (applicative/eval-key env-with-sequence :b {::applicative/context promesa/context}))))
   (testing "sync=async for sequence with nil values"
     (is (match? (-> (core/resolve :b env+sequence-with-nil-values) (get :b) ::data/value)
-                (applicative/eval-key env+sequence-with-nil-values :b))))
+                (applicative/eval-key env+sequence-with-nil-values :b {::applicative/context promesa/context}))))
   (testing "sync=async for sequence returning nil values"
     (is (match? (-> (core/resolve :b env+sequence-returning-nil-values) (get :b) ::data/value)
-                (applicative/eval-key env+sequence-returning-nil-values :b))))
+                (applicative/eval-key env+sequence-returning-nil-values :b {::applicative/context promesa/context}))))
   (testing "async version takes a third of the time of sync version
             (runtime diff is 2 sec, within a tolerance of 3ms"
     (let [[nanosec-sync _]  (criterium/time-body (core/resolve :c env-with-sequence+delay-sync))
-          [nanosec-async _] (criterium/time-body (applicative/eval-key env-with-sequence+delay :c))]
+          [nanosec-async _] (criterium/time-body (applicative/eval-key env-with-sequence+delay :c {::applicative/context promesa/context}))]
       (is (match? (matchers/within-delta 8000000 2000000000)
                   (- nanosec-sync nanosec-async)))))
   (testing "Actually computes the correct answers"
-    (is (match? [2 3 4] (applicative/eval-key env-with-sequence+delay :c))))
+    (is (match? [2 3 4] (applicative/eval-key env-with-sequence+delay :c {::applicative/context promesa/context}))))
   (testing "resolve closure sequence"
     (is (= [2 4 6]
-           (applicative/eval-key env-with-closure-sequence :y)))))
+           (applicative/eval-key env-with-closure-sequence :y {::applicative/context promesa/context})))))
 
 (deftest schema-test
   (let [env-with-schema         {:a (>value 2)
@@ -192,7 +192,8 @@
                                  :b (>value 1)
                                  :c (yielding-schema (>leaf (+ ?a ?b)) s/Bool)}]
     (testing "it should not fail"
-      (is (match? 3 (applicative/eval-key env-with-schema :c {::applicative/fvalidate schema/fvalidate}))))
+      (is (match? 3 (applicative/eval-key env-with-schema :c {::applicative/context promesa/context
+                                                              ::applicative/fvalidate schema/fvalidate}))))
     (testing "returns ex-info when schema is selected as fvalidate, and schema fn validation is enabled"
       (is (thrown-match? clojure.lang.ExceptionInfo
                          {:type   :schema.core/error
@@ -200,9 +201,11 @@
                           :value  3}
                          (ex-data
                           (s/with-fn-validation
-                            (applicative/eval-key env-with-failing-schema :c {::applicative/fvalidate schema/fvalidate}))))))
+                            (applicative/eval-key env-with-failing-schema :c {::applicative/context promesa/context
+                                                                              ::applicative/fvalidate schema/fvalidate}))))))
     (testing "doesn't validate when validation is disabled"
-      (is (match? 3 (applicative/eval-key env-with-failing-schema :c {::applicative/fvalidate schema/fvalidate}))))))
+      (is (match? 3 (applicative/eval-key env-with-failing-schema :c {::applicative/context promesa/context
+                                                                      ::applicative/fvalidate schema/fvalidate}))))))
 
 (deftest synchronous-applicative-test
   (let [simple-env {:a (>value 2)
