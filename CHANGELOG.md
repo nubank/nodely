@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.0.2 / 2024-11-14
+- Remove the default engine behavior in internal applicative eval functions
+
 ## 2.0.1 / 2024-11-07
 - Allow implicit args for nodely syntax macros (e.g. >leaf) to include namespaces in the implicit arg symbols.
 
