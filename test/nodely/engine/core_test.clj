@@ -1,4 +1,5 @@
 (ns nodely.engine.core-test
+  (:refer-clojure :exclude [resolve])
   (:require
    [clojure.test :refer :all]
    [clojure.test.check.clojure-test :refer [defspec]]
