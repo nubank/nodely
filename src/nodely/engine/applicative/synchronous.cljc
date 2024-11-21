@@ -1,15 +1,14 @@
 (ns nodely.engine.applicative.synchronous
   (:require
-   [cats.protocols :as mp]
    [nodely.engine.applicative.protocols :as protocols]))
 
 (declare context)
 
 (defrecord Box [value]
-  mp/Contextual
+  protocols/Contextual
   (-get-context [_] context)
 
-  mp/Extract
+  protocols/Extract
   (-extract [it] value))
 
 (defn box
@@ -22,15 +21,14 @@
 
 (def ^:no-doc context
   (reify
-    mp/Context
     protocols/RunNode
     (-apply-fn [_ f mv]
       (box (f (unbox mv))))
-    mp/Functor
+    protocols/Functor
     (-fmap [_ f mv]
       (box (f (unbox mv))))
 
-    mp/Monad
+    protocols/Monad
     (-mreturn [_ v]
       (box v))
 
@@ -38,7 +36,7 @@
     (-mbind [_ mv f]
       (f (unbox mv)))
 
-    mp/Applicative
+    protocols/Applicative
     (-pure [_ v]
       (box v))
     (-fapply [_ pf pv]

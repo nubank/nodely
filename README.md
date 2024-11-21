@@ -60,35 +60,6 @@ expressing branches; Nodely allows for conditional dependencies that
 defer evaluation until run time checks have determined it is necessary
 to evaluate a dependency.
 
-### Cycle Detection
-
-Nodely provides a handy function that throws an error when a cycle has been detected in your _environment_. To use this function, simply execute the following code:
-
-```clj
-(comment
-  (require '[nodely.api.v0 :as nodely])
-  (nodely/checked-env
-   {:a (nodely/>value 1)
-    :b (nodely/>leaf (even? ?a))})
-) ;; When no cycle is detected, returns env {:a #:nodely.data{:type :value, :value 1}...}
-```
-
->Avoid using the `checked-env` function at runtime, as its calculations can be costly. It is recommended to perform this verification only during development, using the REPL.
-
-It's important to be aware that this function may sometimes produce false positives when dealing with graphs that contain mutually exclusive conditions. Here's an example where the function might produce a false positive:
-
-```clj
-(comment
-  (require '[nodely.api.v0 :as nodely])
-  (nodely/checked-env
-   {:f  (>if (>leaf ?c) :it-was-even! (>leaf ?e))
-     :e (>if (>leaf ?c) (>leaf ?f) :it-was-odd!)
-     :c (>leaf (even? (rand-int 2)))})
-) ;; throws "Checked-env found cycles at compile time"
-```
-
-Keep in mind these limitations and double-check the results if your graph contains such scenarios.
-
 ## Definitions
 
 ### Nodes
@@ -243,9 +214,12 @@ Engines supported in Nodely include:
  | ------------------------------- | ---------------------------------- | ------------ |
  | Lazy Synchronous                | `:sync.lazy`                       | Mature       | 
  | Core Async Lazy Scheduling      | `:core-async.lazy-scheduling`      | Mature       | 
+ | Applicative Virtual Threads     | `:applicative.virtual-futures`     | Mature       |
+ | Async Virtual Threads           | `:async.virtual-futures`           | Experimental |
  | Core Async Iterative Scheduling | `:core-async.iterative-scheduling` | Experimental | 
  | Async Manifold                  | `:async.manifold`                  | Experimental | 
- | Async Applicative               | `:async.applicative`               | Experimental | 
+ | Async Applicative               | `:applicative.core-async`          | Experimental | 
+ | Promesa Async Applicative       | `:applicative.promesa`             | Experimental | 
 
 ### Lazy Synchronous
 
@@ -301,16 +275,16 @@ time. However, it is likely to create many blocking Threads in the
 process, and so may have poor consequences when, e.g. serving many
 hundreds or thousands of requests per minute.
 
-### Async Applicative
+### Applicative
 
-This engine is implemented based on the category theory concept of Applicative Functors.
-Applicative Functors have been considered as good abstractions for asynchronous processes because parts of its structure do not imply a strict execution order.
-Because of that we were able to implement support to several engines with a single code base, just changing the required set of protocols.
-Currently Async Applicative supports the following sub-engines:
+Applicative engines are implemented based on the category theory concept of Applicative Functors.
+Applicative Functors have been considered as good abstractions for asynchronous processes because parts of its structure do not imply a strict execution order. Because of that we were able to implement support to several engines with a single code base, just changing the required set of protocols.
+Some examples of engines we have implemented using the applicative framework:
 
 * Synchronous
 * Core Async
 * Promesa
+* Virtual threads
 
 Setting a sub-engine (evaluation context) is done with the `:nodely.engine.applicative/context` option, which defaults to promesa.
 
@@ -321,8 +295,13 @@ Setting a sub-engine (evaluation context) is done with the `:nodely.engine.appli
                              :nodely.engine.applicative/context applicative.core-async/context})
 ```
 
-Everything related to the applicative engine is currently experimental and subject to change.
+We don't recommend usage of functions that are not part of the api namespace, those are subject to breaking changes.
+Instead use the engines that are provided by `nodely.api.v0`.
 
+### Async Virtual Futures
+
+This engine relies on support to Virtual Threads added in Java 21. This engine will only be loaded and enabled in the api if you are running Java 21 or above.
+This engine works similarly to :async.manifold engine but dispatching futures using virtual threads instead.
 
 ## Risks
 
@@ -349,6 +328,35 @@ core.async workers deadlock, waiting on each other to complete.
 
 If you see evaluation hanging, start investigating for loops in your
 environment.
+
+### Cycle Detection
+
+Nodely provides a handy function that throws an error when a cycle has been detected in your _environment_. To use this function, simply execute the following code:
+
+```clj
+(comment
+  (require '[nodely.api.v0 :as nodely])
+  (nodely/checked-env
+   {:a (nodely/>value 1)
+    :b (nodely/>leaf (even? ?a))})
+) ;; When no cycle is detected, returns env {:a #:nodely.data{:type :value, :value 1}...}
+```
+
+>Avoid using the `checked-env` function at runtime, as its calculations can be costly. It is recommended to perform this verification only during development, using the REPL.
+
+It's important to be aware that this function may sometimes produce false positives when dealing with graphs that contain mutually exclusive conditions. Here's an example where the function might produce a false positive:
+
+```clj
+(comment
+  (require '[nodely.api.v0 :as nodely])
+  (nodely/checked-env
+   {:f  (>if (>leaf ?c) :it-was-even! (>leaf ?e))
+     :e (>if (>leaf ?c) (>leaf ?f) :it-was-odd!)
+     :c (>leaf (even? (rand-int 2)))})
+) ;; throws "Checked-env found cycles at compile time"
+```
+
+Keep in mind these limitations and double-check the results if your graph contains such scenarios.
 
 ## Related Work
 

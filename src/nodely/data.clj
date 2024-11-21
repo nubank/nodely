@@ -1,6 +1,7 @@
 (ns nodely.data
-  (:refer-clojure :exclude [map sequence])
+  (:refer-clojure :exclude [map sequence flatten])
   (:require
+   [clojure.set :as set]
    [schema.core :as s]))
 
 ;;
@@ -24,10 +25,12 @@
                         :truthy    (s/recursive #'Node)
                         :falsey    (s/recursive #'Node)})
 
-(s/defschema Sequence #::{:type  (s/eq :sequence)
-                          :input s/Keyword
-                          :fn    (s/pred ifn?)
-                          :tags  #{node-tag}})
+(s/defschema Sequence #::{:type         (s/eq :sequence)
+                          :input        s/Keyword
+                          :process-node (s/conditional
+                                         #(= (get % ::type) :value) Value
+                                         #(= (get % ::type) :leaf) Leaf)
+                          :tags         #{node-tag}})
 
 (s/defschema Node (s/conditional
                    #(= (get % ::type) :value) Value
@@ -69,15 +72,23 @@
 
 (s/defn sequence
   ([input :- s/Keyword
-    fn]
-   (sequence input fn #{}))
+    f]
+   (sequence input f #{}))
   ([input :- s/Keyword
-    fn
+    f
     tags :- #{node-tag}]
-   #::{:type  :sequence
-       :input input
-       :fn    fn
-       :tags  tags}))
+   #::{:type         :sequence
+       :input        input
+       :process-node (value f)
+       :tags         tags})
+  ([input :- s/Keyword
+    closure-inputs
+    f
+    tags :- #{node-tag}]
+   #::{:type         :sequence
+       :input        input
+       :process-node (leaf closure-inputs f)
+       :tags         tags}))
 
 ;;
 ;; Node Utilities
@@ -90,13 +101,20 @@
   [node]
   (= :value (::type node)))
 
-(defn node-inputs
+(defn leaf?
   [node]
-  (case (::type node)
-    :value    #{}
-    :leaf     (::inputs node)
-    :branch   (recur (::condition node))
-    :sequence #{(::input node)}))
+  (= :leaf (::type node)))
+
+(defn node-inputs
+  ([node]
+   (node-inputs node #{}))
+  ([node inputs]
+   (case (::type node)
+     :value    inputs
+     :leaf     (set/union inputs (::inputs node))
+     :branch   (recur (::condition node) inputs)
+     :sequence (recur (::process-node node)
+                      (conj inputs (::input node))))))
 
 ;;
 ;; Env Utils

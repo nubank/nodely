@@ -1,10 +1,11 @@
-(ns nodely.engine.manifold
+(ns nodely.engine.virtual-workers
   (:refer-clojure :exclude [eval])
   (:require
+   [clojure.core.async :as async]
    [loom.alg :as alg]
-   [manifold.deferred :as deferred]
    [nodely.data :as data]
-   [nodely.engine.core :as core]))
+   [nodely.engine.core :as core]
+   [nodely.engine.virtual-future :as virtual-future]))
 
 (declare eval-async)
 
@@ -25,7 +26,7 @@
         f      (::data/value (eval-async (::data/process-node node) future-env))
         in     (prepare-inputs [in-key] future-env)]
     (data/value (->> (get in in-key)
-                     (mapv #(deferred/future (f %)))
+                     (mapv #(virtual-future/vfuture (f %)))
                      (mapv deref)))))
 
 (defn eval-async
@@ -42,7 +43,7 @@
         top-sort   (alg/topsort graph)
         future-env (reduce (fn [acc k]
                              (let [node (core/get! env k)]
-                               (assoc acc k (deferred/future (eval-async node acc)))))
+                               (assoc acc k (virtual-future/vfuture (eval-async node acc)))))
                            {}
                            top-sort)]
     (into {} (map (juxt key (comp deref val)) future-env))))
@@ -64,3 +65,10 @@
 (defn eval-node
   [node env]
   (eval-key (assoc env ::target node) ::target))
+
+(defn eval-key-channel
+  [env k]
+  (let [ret (async/chan 1)]
+    (virtual-future/vfuture
+     (async/>!! ret (eval-key env k)))
+    ret))

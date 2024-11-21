@@ -27,6 +27,11 @@
 (def env-with-sequence {:a (>leaf [1 2 3])
                         :b (syntax/>sequence inc ?a)})
 
+(def env-with-sequence-with-closure
+  {:a (syntax/>value [1 2 3])
+   :c (syntax/>value 2)
+   :b (syntax/>sequence #(* % ?c) ?a)})
+
 (def env-with-sequence+delay {:a (>leaf [1 2 3])
                               :b (syntax/>sequence
                                   #(do (Thread/sleep 1000) (inc %))
@@ -54,7 +59,9 @@
       (is (match? (matchers/within-delta 8000000 2000000000)
                   (- nanosec-sync nanosec-async)))))
   (testing "Actually computes the correct answers"
-    (is (= [2 3 4] (manifold/eval-key env-with-sequence+delay :b)))))
+    (is (= [2 3 4] (manifold/eval-key env-with-sequence+delay :b))))
+  (testing "Supports closure of nodes in the iterated fn"
+    (is (= [2 4 6] (manifold/eval-key env-with-sequence-with-closure :b)))))
 
 (deftest eval-test
   (testing "eval node async"

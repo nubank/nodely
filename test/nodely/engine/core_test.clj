@@ -1,4 +1,5 @@
 (ns nodely.engine.core-test
+  (:refer-clojure :exclude [resolve])
   (:require
    [clojure.test :refer :all]
    [clojure.test.check.clojure-test :refer [defspec]]
@@ -7,7 +8,7 @@
    [nodely.data :as data]
    [nodely.engine.core :as core]
    [nodely.fixtures :as fixtures]
-   [nodely.syntax :as syntax :refer [>cond >if >leaf]]
+   [nodely.syntax :as syntax :refer [>cond >if >leaf >sequence]]
    [schema.test]))
 
 (use-fixtures :once schema.test/validate-schemas)
@@ -68,6 +69,10 @@
 
 (def env-with-sequence {:x (data/value [1 2 3])
                         :y (data/sequence :x inc)})
+
+(def env-with-closure-sequence {:x (data/value [1 2 3])
+                                :z (data/value 2)
+                                :y (>sequence (fn [e] (* e ?z)) ?x)})
 
 (def branch-with-sequence {:x (data/value [1 2 3])
                            :y (data/value [4 5 6])
@@ -165,6 +170,11 @@
     (is (= {:x (data/value [1 2 3])
             :y (data/value [2 3 4])}
            (core/resolve :y env-with-sequence))))
+  (testing "resolve closure sequence"
+    (is (= {:x (data/value [1 2 3])
+            :z (data/value 2)
+            :y (data/value [2 4 6])}
+           (core/resolve :y env-with-closure-sequence))))
   (testing "resolve with nested branches"
     (is (= {:x (data/value 1)
             :y (data/value 2)

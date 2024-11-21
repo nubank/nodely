@@ -1,7 +1,41 @@
 # Changelog
 
-## Unreleased
-- Better error message for sync lazy engine when env is missing a key
+## 2.0.2 / 2024-11-14
+- Remove the default engine behavior in internal applicative eval functions
+
+## 2.0.1 / 2024-11-07
+- Allow implicit args for nodely syntax macros (e.g. >leaf) to include namespaces in the implicit arg symbols.
+
+## 2.0.0 / 2024-10-17
+- Breaking change: removed transitive dependencies
+-- The following dependencies are no longer transitively provided,
+   but, if otherwise made available on the classpath will continue to be
+   supported: org.clojure/core.async, funcool/promesa, manifold
+-- No code changes are required, but, if using an engine that is
+   powered by one of these libraries, then clients must include
+   these libraries on their classpath explicitly, or, transitively
+   include them through some other library.
+
+## 1.19.1 / 2024-08-28
+- Fix Contextual protocol to accept nil context cases
+
+## 1.19.0 / 2024-08-15
+- Remove applicative engine dependency from funcool/cats
+
+## 1.18.1 / 2024-07-16
+- Fix virtual-future applicative engine error handling so that ExecutionExceptions are always unwrapped
+- Improve ergonomics when an unknown engine is specified
+- Mark virtual future applicative engine as `eval-key-channel` true.
+
+## 1.18.0 / 2024-06-20
+- Add virtual-future based applicative engine (for java21+)
+
+## 1.17.0 / 2024-05-23
+- Better and more consistent error messages when there is a missing key in an environment.
+- Add new engine :async.virtual-futures that uses Java 21 support for virtual threads
+
+## 1.16.0 / 2024-02-16
+- Allow sequences to refer to any node in the environment for the mapped fn
 
 ## 1.15.0 / 2023-12-07
 - Allow running the lazy synchronous engine with a channel return.

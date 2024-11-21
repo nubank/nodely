@@ -76,8 +76,8 @@
 
 (defn prepare-inputs
   [input-keys env]
-  (->> (select-keys env input-keys)
-       (map (juxt key (comp ::data/value val)))
+  (->> input-keys
+       (map (juxt identity (comp ::data/value (partial get env))))
        (into {})))
 
 (defn eval-leaf
@@ -126,7 +126,7 @@
 (defn- sequence->value
   [node env]
   (let [in-key  (::data/input node)
-        f       (::data/fn node)
+        f       (::data/value (first (node->value (::data/process-node node) env)))
         new-env (resolve-inputs [in-key] env)
         in      (data/get-value new-env in-key)]
     [(data/value (mapv f in)) new-env]))
