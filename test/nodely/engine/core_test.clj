@@ -1,4 +1,5 @@
 (ns nodely.engine.core-test
+  (:refer-clojure :exclude [resolve])
   (:require
    [clojure.test :refer :all]
    [clojure.test.check.clojure-test :refer [defspec]]
@@ -145,7 +146,7 @@
          #{:a :b :c}
          (core/dependencies-for :d test-env)))))
 
-(deftest resolve-test
+(deftest resolve
   (testing "resolve map with two direct dependencies"
     (is (= {:x (data/value 2)
             :y (data/value 4)
