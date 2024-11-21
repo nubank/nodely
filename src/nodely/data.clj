@@ -1,5 +1,5 @@
 (ns nodely.data
-  (:refer-clojure :exclude [map sequence])
+  (:refer-clojure :exclude [map sequence flatten])
   (:require
    [clojure.set :as set]
    [schema.core :as s]))
