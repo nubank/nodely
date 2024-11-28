@@ -308,6 +308,7 @@
     promesa/context     java.util.concurrent.CompletableFuture
     core-async/context  clojure.core.async.impl.channels.ManyToManyChannel
     synchronous/context nodely.engine.applicative.synchronous.Box))
+
 (deftest manifold-applicative-test
   (let [simple-env {:a (>value 2)
                     :b (>value 1)
@@ -333,7 +334,7 @@
 
 (deftest manifold-eval-key-test
   (testing "eval promise"
-    (is (match? 3 (applicative/eval-key test-env :c {::applicative/context core-async/context}))))
+    (is (match? 3 (applicative/eval-key test-env :c {::applicative/context manifold/context}))))
   (testing "async works"
     (let [[time-ns result] (criterium/time-body (applicative/eval-key test-env+delay-core-async
                                                                       :d
