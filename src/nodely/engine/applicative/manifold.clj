@@ -48,20 +48,20 @@
 (def ^:no-doc context
   (reify
     mp/RunNode
-    (-apply-fn [_ f mv] (deferred/chain mv f))
+    (-apply-fn [_ f mv] (deferred/chain' mv f))
     mp/Functor
-    (-fmap [_ f mv] (deferred/chain mv f))
+    (-fmap [_ f mv] (deferred/chain' mv f))
 
     mp/Monad
     (-mreturn [_ v] (deferred/future v))
 
     (-mbind [_ mv f]
-      (deferred/chain mv f))
+      (deferred/chain' mv f))
 
     mp/Applicative
     (-pure [_ v] (deferred/future v))
 
     (-fapply [_ pf pv]
-      (deferred/chain (deferred/zip' pf pv)
+      (deferred/chain' (deferred/zip' pf pv)
                       (fn [[f v]]
                         (f v))))))
