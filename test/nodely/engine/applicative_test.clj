@@ -11,6 +11,7 @@
    [nodely.engine.applicative :as applicative]
    [nodely.engine.applicative.core-async :as core-async]
    [nodely.engine.applicative.promesa :as promesa]
+   [nodely.engine.applicative.manifold :as manifold]
    [nodely.engine.applicative.synchronous :as synchronous]
    [nodely.engine.core :as core]
    [nodely.engine.core-async.core :as nodely.async]
@@ -307,3 +308,75 @@
     promesa/context     java.util.concurrent.CompletableFuture
     core-async/context  clojure.core.async.impl.channels.ManyToManyChannel
     synchronous/context nodely.engine.applicative.synchronous.Box))
+
+(deftest manifold-applicative-test
+  (let [simple-env {:a (>value 2)
+                    :b (>value 1)
+                    :c (>leaf (+ ?a ?b))}
+        env-with-failing-schema {:a (>value 2)
+                                 :b (>value 1)
+                                 :c (yielding-schema (>leaf (+ ?a ?b)) s/Bool)}]
+    (testing "it should not fail"
+      (is (match? 3 (applicative/eval-key simple-env :c {::applicative/context manifold/context}))))
+
+    (testing "more complicated example"
+      (is (match? 4 (applicative/eval-key tricky-example :z {::applicative/context manifold/context}))))
+
+    (testing "returns ex-info when schema is selected as fvalidate, and schema fn validation is enabled"
+      (is (thrown-match? clojure.lang.ExceptionInfo
+                         {:type   :schema.core/error
+                          :schema java.lang.Boolean
+                          :value  3}
+                         (ex-data
+                          (s/with-fn-validation
+                            (applicative/eval-key env-with-failing-schema :c {::applicative/fvalidate schema/fvalidate
+                                                                              ::applicative/context   manifold/context}))))))))
+
+(deftest manifold-eval-key-test
+  (testing "eval promise"
+    (is (match? 3 (applicative/eval-key test-env :c {::applicative/context manifold/context}))))
+  (testing "async works"
+    (let [[time-ns result] (criterium/time-body (applicative/eval-key test-env+delay-core-async
+                                                                      :d
+                                                                      {::applicative/context manifold/context}))]
+      (is (match? {:a 3 :b 6 :c 9} result))
+      (is (match? (matchers/within-delta 100000000 1000000000) time-ns))))
+  (testing "tricky example"
+    (is (match? 4 (applicative/eval-key tricky-example :z
+                                        {::applicative/context manifold/context})))))
+
+(deftest manifold-eval-test
+  (testing "eval promise"
+    (is (match? {:a {::data/value 2}
+                 :b {::data/value 1}
+                 :c {::data/value 3}}
+                (applicative/eval test-env :c {::applicative/context manifold/context}))))
+  (testing "tricky example"
+    (is (match? {:x (data/value 1)
+                 :y (data/value 2)
+                 :a (data/value 3)
+                 :b (data/value 4)
+                 :c (data/value 5)
+                 :w (data/value 4)
+                 :z {::data/type :leaf
+                     ::data/inputs #{:w}}}
+                (applicative/eval tricky-example :w {::applicative/context manifold/context})))))
+
+(deftest manifold-eval-env-with-sequence
+  (testing "async response is equal to sync response"
+    (is (match? (-> (core/resolve :b env-with-sequence) (get :b) ::data/value)
+                (applicative/eval-key env-with-sequence :b {::applicative/context manifold/context}))))
+  (testing "sync=async for sequence with nil values"
+    (is (match? (-> (core/resolve :b env+sequence-with-nil-values) (get :b) ::data/value)
+                (applicative/eval-key env+sequence-with-nil-values :b {::applicative/context manifold/context}))))
+  (testing "sync=async for sequence returning nil values"
+    (is (match? (-> (core/resolve :b env+sequence-returning-nil-values) (get :b) ::data/value)
+                (applicative/eval-key env+sequence-returning-nil-values :b {::applicative/context manifold/context}))))
+  (testing "async version takes a third of the time of sync version
+            (runtime diff is 2 sec, within a tolerance of 3ms"
+    (let [[nanosec-sync _]  (criterium/time-body (core/resolve :c env-with-sequence+delay-sync))
+          [nanosec-async _] (criterium/time-body (applicative/eval-key env-with-sequence+delay-sync :c {::applicative/context manifold/context}))]
+      (is (match? (matchers/within-delta 8000000 2000000000)
+                  (- nanosec-sync nanosec-async)))))
+  (testing "Actually computes the correct answers"
+    (is (match? [2 3 4] (applicative/eval-key env-with-sequence+delay-sync :c {::applicative/context manifold/context})))))
