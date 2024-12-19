@@ -65,3 +65,12 @@
       (deferred/chain' (deferred/zip' pf pv)
                       (fn [[f v]]
                         (f v))))))
+
+(comment
+
+  (def a [1 2 3])
+  (defn inc-delay
+    [xs]
+    (map #(do (Thread/sleep 1000) (inc %)) xs))
+
+  )

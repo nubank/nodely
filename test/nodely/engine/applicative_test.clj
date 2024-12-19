@@ -9,6 +9,7 @@
    [matcher-combinators.test :refer [match?]]
    [nodely.data :as data]
    [nodely.engine.applicative :as applicative]
+   [nodely.engine.applicative.core :as app.core]
    [nodely.engine.applicative.core-async :as core-async]
    [nodely.engine.applicative.promesa :as promesa]
    [nodely.engine.applicative.manifold :as manifold]
@@ -374,9 +375,23 @@
                 (applicative/eval-key env+sequence-returning-nil-values :b {::applicative/context manifold/context}))))
   (testing "async version takes a third of the time of sync version
             (runtime diff is 2 sec, within a tolerance of 3ms"
-    (let [[nanosec-sync _]  (criterium/time-body (core/resolve :c env-with-sequence+delay-sync))
-          [nanosec-async _] (criterium/time-body (applicative/eval-key env-with-sequence+delay-sync :c {::applicative/context manifold/context}))]
+    (let [[nanosec-sync _]  #nu/tapd (criterium/time-body (core/resolve :c env-with-sequence+delay-sync))
+          [nanosec-async _] #nu/tapd (criterium/time-body (applicative/eval-key env-with-sequence+delay-sync :c {::applicative/context manifold/context}))]
       (is (match? (matchers/within-delta 8000000 2000000000)
                   (- nanosec-sync nanosec-async)))))
   (testing "Actually computes the correct answers"
     (is (match? [2 3 4] (applicative/eval-key env-with-sequence+delay-sync :c {::applicative/context manifold/context})))))
+
+
+(comment
+
+  (def a [1 2 3])
+  (defn inc-delay
+    [x]
+    (do (Thread/sleep 1000) (inc x)))
+
+  (def result-eval (criterium/time-body (applicative/eval-key env-with-sequence+delay-sync :c {::applicative/context manifold/context})))
+  (def result
+    (criterium/time-body (app.core/sequence manifold/context (mapv #(app.core/fmap inc-delay (app.core/pure manifold/context %)) a))))
+
+  )
