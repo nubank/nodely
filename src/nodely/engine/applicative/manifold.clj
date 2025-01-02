@@ -1,76 +1,47 @@
 (ns nodely.engine.applicative.manifold
   (:require
-   [nodely.engine.applicative.protocols :as mp]
-   [manifold.deferred :as deferred]))
+   [manifold.deferred :as deferred]
+   [nodely.engine.applicative.protocols :as protocols]))
 
 (declare context)
 
+(defn deref-unwrapped
+  [it]
+  (try (deref it)
+       (catch java.util.concurrent.ExecutionException e
+         (throw (.getCause e)))))
+
 (extend-type manifold.deferred.Deferred
-  mp/Contextual
+  protocols/Contextual
   (-get-context [_] context)
 
-  mp/Extract
+  protocols/Extract
   (-extract [it]
-    (try (deref it)
-         (catch java.util.concurrent.ExecutionException e
-           (throw (.getCause e))))))
+    (deref-unwrapped it)))
 
-(extend-type manifold.deferred.LeakAwareDeferred
-  mp/Contextual
-  (-get-context [_] context)
-
-  mp/Extract
-  (-extract [it]
-    (try (deref it)
-         (catch java.util.concurrent.ExecutionException e
-           (throw (.getCause e))))))
-
-(extend-type manifold.deferred.SuccessDeferred
-  mp/Contextual
-  (-get-context [_] context)
-
-  mp/Extract
-  (-extract [it]
-    (try (deref it)
-         (catch java.util.concurrent.ExecutionException e
-           (throw (.getCause e))))))
-
-(extend-type manifold.deferred.ErrorDeferred
-  mp/Contextual
-  (-get-context [_] context)
-
-  mp/Extract
-  (-extract [it]
-    (try (deref it)
-         (catch java.util.concurrent.ExecutionException e
-           (throw (.getCause e))))))
-
-(def ^:no-doc context
+(def context
   (reify
-    mp/RunNode
-    (-apply-fn [_ f mv] (deferred/chain' mv f))
-    mp/Functor
-    (-fmap [_ f mv] (deferred/chain' mv f))
+    protocols/RunNode
+    (-apply-fn  [_ f mv]
+      (deferred/future (f (deref-unwrapped mv))))
 
-    mp/Monad
-    (-mreturn [_ v] (deferred/future v))
+    protocols/Functor
+    (-fmap [_ f mv]
+      (deferred/future (f (deref-unwrapped mv))))
+
+    protocols/Monad
+    (-mreturn [_ v]
+      (deferred/future v))
 
     (-mbind [_ mv f]
-      (deferred/chain' mv f))
+      (deferred/future (let [v (deref-unwrapped mv)]
+                         (deref-unwrapped (f v)))))
 
-    mp/Applicative
-    (-pure [_ v] (deferred/future v))
+    protocols/Applicative
+    (-pure [_ v]
+      (deferred/future v))
 
     (-fapply [_ pf pv]
-      (deferred/chain' (deferred/zip' pf pv)
-                      (fn [[f v]]
-                        (f v))))))
-
-(comment
-
-  (def a [1 2 3])
-  (defn inc-delay
-    [xs]
-    (map #(do (Thread/sleep 1000) (inc %)) xs))
-
-  )
+      (deferred/future (let [f (deref-unwrapped pf)
+                             v (deref-unwrapped pv)]
+                         (f v))))))
