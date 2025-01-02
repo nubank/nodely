@@ -34,7 +34,6 @@
   (if-let [context (p/-get-context v)]
     context
     (do
-      #nu/tap (type v)
       (throw-illegal-argument
        (str "No context is set and it can not be automatically "
             "resolved from provided value")))))
