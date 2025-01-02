@@ -33,10 +33,9 @@
   [v]
   (if-let [context (p/-get-context v)]
     context
-    (do
-      (throw-illegal-argument
-       (str "No context is set and it can not be automatically "
-            "resolved from provided value")))))
+    (throw-illegal-argument
+     (str "No context is set and it can not be automatically "
+          "resolved from provided value"))))
 
 ;; END CONTEXT STUFF
 
