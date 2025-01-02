@@ -50,6 +50,7 @@
   #{:core-async.lazy-scheduling
     :core-async.iterative-scheduling
     :async.manifold
+    :applicative.manifold
     :applicative.promesa
     :applicative.core-async
     :applicative.virtual-future
@@ -121,6 +122,20 @@
          (t/matching
           #"Could not locate manifold on classpath"
           (try (api/eval-key-channel env :z {::api/engine :async.manifold})
+               (catch Throwable t
+                 (ex-message t)))))
+       (t/testing "attempting to use core.async"
+         (t/matching
+          5
+          (async/<!! (api/eval-key-channel env :z {::api/engine :core-async.lazy-scheduling}))))))
+    (testing-require-delay
+     nodely.engine.applicative.manifold nodely.api.v0/manifold-failure
+     "Kaboom! We don't have manifold for pretend" :test-manifold-failure
+     (t/testing "without manifold on the classpath"
+       (t/testing "attempting to use manifold"
+         (t/matching
+          #"Could not locate manifold on classpath"
+          (try (api/eval-key-channel env :z {::api/engine :applicative.manifold})
                (catch Throwable t
                  (ex-message t)))))
        (t/testing "attempting to use core.async"

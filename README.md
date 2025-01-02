@@ -214,10 +214,11 @@ Engines supported in Nodely include:
  | ------------------------------- | ---------------------------------- | ------------ |
  | Lazy Synchronous                | `:sync.lazy`                       | Mature       | 
  | Core Async Lazy Scheduling      | `:core-async.lazy-scheduling`      | Mature       | 
- | Applicative Virtual Threads     | `:applicative.virtual-futures`     | Mature       |
+ | Applicative Virtual Threads     | `:applicative.virtual-future`      | Mature       |
  | Async Virtual Threads           | `:async.virtual-futures`           | Experimental |
  | Core Async Iterative Scheduling | `:core-async.iterative-scheduling` | Experimental | 
  | Async Manifold                  | `:async.manifold`                  | Experimental | 
+ | Async Manifold Applicative      | `:applicative.manifold`            | Experimental | 
  | Async Applicative               | `:applicative.core-async`          | Experimental | 
  | Promesa Async Applicative       | `:applicative.promesa`             | Experimental | 
 

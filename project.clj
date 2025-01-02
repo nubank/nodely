@@ -10,7 +10,7 @@
                  [aysylu/loom "1.0.2"]
                  [org.clojure/core.async "1.5.648" :scope "provided"]
                  [funcool/promesa "10.0.594" :scope "provided"]
-                 [manifold "0.1.9-alpha5" :scope "provided"]
+                 [manifold "0.4.3" :scope "provided"]
                  [prismatic/schema "1.1.12"]]
 
   :exclusions [log4j]

@@ -54,11 +54,13 @@
 
 (def manifold-failure
   (delay
-   (try (require 'nodely.engine.manifold)
+   (try (require 'nodely.engine.manifold
+                 'nodely.engine.applicative.manifold)
         (catch Exception e
           {:msg                   "Could not locate manifold on classpath."
            ::error                :missing-ns
-           ::requested-namespaces '[nodely.engine.manifold]
+           ::requested-namespaces '[nodely.engine.manifold
+                                    nodely.engine.applicative.manifold]
            :cause                 e}))))
 
 (def promesa-failure
@@ -80,6 +82,11 @@
                                      ::enable-deref     core-async-failure}
    :async.manifold                  {::ns-name          'nodely.engine.manifold
                                      ::opts-fn          (constantly nil)
+                                     ::enable-deref     manifold-failure}
+   :applicative.manifold            {::ns-name          'nodely.engine.applicative
+                                     ::opts-fn          #(assoc % ::applicative/context
+                                                                (var-get (resolve 'nodely.engine.applicative.manifold/context)))
+                                     ::eval-key-channel true
                                      ::enable-deref     manifold-failure}
    :applicative.promesa             {::ns-name          'nodely.engine.applicative
                                      ::opts-fn          #(assoc % ::applicative/context
