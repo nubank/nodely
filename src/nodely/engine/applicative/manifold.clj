@@ -45,3 +45,26 @@
       (deferred/future (let [f (deref-unwrapped pf)
                              v (deref-unwrapped pv)]
                          (f v))))))
+
+(comment
+  (def subscribe
+    (fn
+      ([this d x f]
+       (let [d (or d (deferred/deferred))]
+         (deferred/on-realized x
+                               #(this d % f)
+                               #(deferred/error! d %))
+         d))))
+
+  (defn mbind [mv f]
+    (let [d (deferred/deferred)]
+      (deferred/on-realized
+       mv
+       #(deferred/success! d (f %))
+       #(deferred/error! d %))
+      d))
+
+  (mbind (deferred/future 1) (fn [x] (Thread/sleep 1000) (inc x)))
+
+  ;
+  )
