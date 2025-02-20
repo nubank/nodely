@@ -24,6 +24,7 @@
 
   :profiles {:uberjar {:aot :all}
              :dev     {:source-paths ["dev"]
+                       :jvm-opts ["-Dclojure.core.async.go-checking=true"]
                        :plugins [[com.github.clojure-lsp/lein-clojure-lsp "0.1.1"]
                                  [com.github.clj-kondo/lein-clj-kondo "0.1.1"]]
                        :dependencies [[nubank/matcher-combinators "3.1.4"]
