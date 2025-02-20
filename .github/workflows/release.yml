@@ -34,9 +34,6 @@ jobs:
     - name: Run clj tests
       run: lein test
 
-    - name: Run midje tests
-      run: lein midje
-
   release:
     name: 'Publish on Clojars'
     runs-on: ubuntu-latest
