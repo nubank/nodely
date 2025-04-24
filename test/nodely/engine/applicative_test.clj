@@ -255,10 +255,10 @@
 
 (defspec does-not-blow-up-spec
   (prop/for-all [env (fixtures/env-gen {})]
-    (applicative/eval-key env
-                          (rand-nth (keys env))
-                          {::applicative/context core-async/context})
-    true))
+                (applicative/eval-key env
+                                      (rand-nth (keys env))
+                                      {::applicative/context core-async/context})
+                true))
 
 (deftest eval-key-contextual-test
   (testing "eval node async for interesting example"
