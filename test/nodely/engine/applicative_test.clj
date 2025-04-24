@@ -16,7 +16,7 @@
    [nodely.engine.core-async.core :as nodely.async]
    [nodely.engine.schema :as schema]
    [nodely.fixtures :as fixtures]
-   [nodely.syntax :as syntax :refer [>leaf >sequence >value]]
+   [nodely.syntax :as syntax :refer [>leaf >sequence >value blocking]]
    [nodely.syntax.schema :refer [yielding-schema]]
    [promesa.core :as p]
    [schema.core :as s]))
@@ -54,22 +54,11 @@
                                      (>leaf ?c))
                      :z (>leaf ?w)})
 
-(def env-with-blocking-tag {:a (>leaf (Thread/currentThread))
-                            :b (syntax/blocking (>leaf (Thread/currentThread)))
-                            :a-name (>leaf (.getName ?a))
-                            :b-name (>leaf (.getName ?b))
-                            :c (>leaf (str ?a-name " " ?b-name))})
-
-(def env-with-nine-sleeps {:a (syntax/blocking (>leaf (do (Thread/sleep 1000) :a)))
-                           :b (syntax/blocking (>leaf (do (Thread/sleep 1000) :b)))
-                           :c (syntax/blocking (>leaf (do (Thread/sleep 1000) :c)))
-                           :d (syntax/blocking (>leaf (do (Thread/sleep 1000) :d)))
-                           :e (syntax/blocking (>leaf (do (Thread/sleep 1000) :e)))
-                           :f (syntax/blocking (>leaf (do (Thread/sleep 1000) :f)))
-                           :g (syntax/blocking (>leaf (do (Thread/sleep 1000) :g)))
-                           :h (syntax/blocking (>leaf (do (Thread/sleep 1000) :h)))
-                           :i (syntax/blocking (>leaf (do (Thread/sleep 1000) :i)))
-                           :z (>leaf (into #{} [?a ?b ?c ?d ?e ?f ?g ?h ?i]))})
+(def env-with-blocking-take {:a (>leaf {:the-chan (async/chan 1)})
+                             :b (blocking (>leaf (async/>!! (:the-chan ?a) :test)))
+                             :c (>leaf (try (async/<!! (:the-chan ?a))
+                                            (catch Throwable t {:the-ex t})))
+                             :d (>leaf (vector ?b (:the-ex ?c)))})
 
 (def env-with-sequence {:a (>leaf [1 2 3])
                         :b (syntax/>sequence inc ?a)})
@@ -254,29 +243,22 @@
     (testing "channel-leaf"
       (is (= 7 (applicative/eval-key env+channel-leaf :c {::applicative/context core-async/context}))))))
 
-(deftest core-async-blocking-eval-test
-  (testing "eval of a blocking tagged node will happen in the `async-thread-macro` worker pool"
-    (is (match? #"async-thread-macro-\d+"
-                (applicative/eval-key env-with-blocking-tag :b-name {::applicative/context core-async/context})))
-    (is (match? #"async-dispatch-\d+"
-                (applicative/eval-key env-with-blocking-tag :a-name {::applicative/context core-async/context})))))
-
-(deftest thread-sleeping-test-proves-thread-works-how-we-expect
-  (testing "actually only 8 threads in the async dispatch worker pool"
-    (is (match? 8
-                @@#'clojure.core.async.impl.exec.threadpool/pool-size)))
-  (testing "when we have 9 1-second blocking nodes in one environment, it can run in fewer than 2 seconds"
-    (testing "async version runs parallel when option is neglected"
-      (let [[nanosec-async _] (criterium/time-body (applicative/eval-key env-with-nine-sleeps :z {::applicative/context core-async/context}))]
-        (is (match? (matchers/within-delta 1000000000 1000000000)
-                    nanosec-async))))))
+(deftest blocking-tagging-test
+  (testing "about the blocking tag"
+    (testing "go-checking system property is set"
+      (is (Boolean/getBoolean "clojure.core.async.go-checking")))
+    (testing "eval of an env with blocking ops in dispatch worker pool provokes exceptions, evaling same ops in threads doesn't"
+      (is (match? [true java.lang.IllegalStateException]
+                  (update (applicative/eval-key env-with-blocking-take :d {::applicative/context core-async/context})
+                          1
+                          class))))))
 
 (defspec does-not-blow-up-spec
   (prop/for-all [env (fixtures/env-gen {})]
-                (applicative/eval-key env
-                                      (rand-nth (keys env))
-                                      {::applicative/context core-async/context})
-                true))
+    (applicative/eval-key env
+                          (rand-nth (keys env))
+                          {::applicative/context core-async/context})
+    true))
 
 (deftest eval-key-contextual-test
   (testing "eval node async for interesting example"
