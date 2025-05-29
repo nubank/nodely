@@ -116,9 +116,45 @@
      :sequence (recur (::process-node node)
                       (conj inputs (::input node))))))
 
+(defn update-leaf
+  [leaf f]
+  (update leaf :nodely.data/fn #(comp f %)))
+
+(declare update-node)
+
+(defn update-branch
+  [{::keys [condition truthy falsey]}
+   f
+   {:keys [apply-to-condition?]
+    :or   {apply-to-condition? false}}]
+  #::{:type      :branch
+      :condition (if apply-to-condition?
+                   (update-node condition f)
+                   condition)
+      :falsey    (update-node falsey f)
+      :truthy    (update-node truthy f)})
+
+(defn update-sequence
+  [sequence f]
+  (update sequence ::process-node update-node f))
+
+(defn update-node
+  ([node f opts]
+   (case (::type node)
+     :value    (update node ::value f)
+     :leaf     (update-leaf node f)
+     :branch   (update-branch node f opts)
+     :sequence (update-sequence node f)))
+  ([node f]
+   (update-node node f {})))
+
 ;;
 ;; Env Utils
 ;;
+
+(defn with-error-handler
+  [env handler]
+  (update-vals env #(update-node % handler {:apply-to-condition? true})))
 
 (s/defn get-value :- s/Any
   [env :- Env
