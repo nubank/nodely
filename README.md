@@ -21,6 +21,7 @@ Nodely is a library for declaring and executing data dependent computations with
 * Conditional data dependency
 * Async data dependency resolution
 * Lazy data dependency resolution
+* Graph analysis and visualization
 
 ### Rationale & Motivation
 
@@ -200,6 +201,22 @@ Nodely implements partial support for non blocking operations with [core-async](
 ;=> 6
 ```
 The example above is just to demonstrate the syntax. The main benefit of using `>channel-leaf` is for wrapping it around async IO operations. `>channel-leaf` is compatible with all other engines, but to take full advantage of non-blocking IO you should use one of the core-async engines, such as `:core-async.lazy-scheduling`.
+
+## Analysis & Visualization
+
+Nodely provides tools to analyze and visualize your dependency graphs:
+
+```clojure
+(require '[nodely.analysis.visualize :as viz])
+
+(let [analysis (viz/analyze-nodely-env my-env)]
+  (println "Stats:" (:statistics analysis))
+  (spit "graph.dot" (:dot-format analysis)))
+
+;; Convert to image: $ dot -Tpng graph.dot -o graph.png
+```
+
+The analysis includes dependency statistics, node type counts, and generates DOT format graphs compatible with Graphviz.
 
 ## Evaluation
 
