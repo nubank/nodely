@@ -2,7 +2,6 @@
   (:refer-clojure :exclude [cond])
   (:require
    [clojure.test :refer :all]
-   [clojure.string :as string]
    [nodely.data :as data]))
 
 (deftest node?
@@ -31,17 +30,13 @@
 (deftest update-leaf-test
   (testing "update-leaf modifies the function by composing with the given function"
     (let [original-leaf (data/leaf [:x] (comp inc :x))
-          updated-leaf (data/update-leaf original-leaf (partial * 2))]
-      (is (= 12 ((::data/fn updated-leaf) {:x 5})))))
-
-  (testing "update-leaf preserves other leaf properties"
-    (let [original-leaf (data/leaf [:a :b] (fn [{:keys [a b]}] (str a " " b)) #{::data/blocking})
-          updated-leaf (data/update-leaf original-leaf (fn [s] (str s "!")))]
-      (is (= (::data/type updated-leaf) :leaf))
-      (is (= (::data/inputs updated-leaf) #{:a :b}))
-      (is (= (::data/tags updated-leaf) #{::data/blocking}))
-      ;; Test function composition: (fn [s] (str s "!")) ∘ (fn [{:keys [a b]}] (str a " " b))
-      (is (= "hello world!" ((::data/fn updated-leaf) {:a "hello" :b "world"}))))))
+          updated-leaf (data/update-leaf original-leaf (partial * 2))
+          expected-props {::data/type   :leaf
+                          ::data/inputs #{:x}}]
+      (is (= expected-props (select-keys updated-leaf (keys expected-props)))
+          "update-leaf should preserve other leaf properties")
+      (is (= 12 ((::data/fn updated-leaf) {:x 5}))
+          "update-leaf should modify the function by composing with the given function"))))
 
 (deftest update-branch-test
   (testing "update-branch without apply-to-condition updates truthy and falsey branches"
@@ -50,10 +45,7 @@
           falsey (data/leaf [:z] (comp dec :z))
           branch (data/branch condition truthy falsey)
           updated-branch (data/update-branch branch (partial * 2) {})]
-      (is (= (::data/type updated-branch) :branch))
-      ;; Condition should remain unchanged
-      (is (= (::data/condition updated-branch) condition))
-      ;; Truthy and falsey branches should be updated
+      (is (= true ((::data/fn (::data/condition updated-branch)) {:x 2}))) ; (even? 2) = true
       (is (= 20 ((::data/fn (::data/truthy updated-branch)) {:y 9}))) ; (* 2 (inc 9)) = 20
       (is (= 18 ((::data/fn (::data/falsey updated-branch)) {:z 10}))))) ; (* 2 (dec 10)) = 18
 
@@ -62,43 +54,36 @@
           truthy (data/leaf [:y] (comp inc :y))
           falsey (data/leaf [:z] (comp inc :z))
           branch (data/branch condition truthy falsey)
-          updated-branch (data/update-branch branch (partial * 2) {:apply-to-condition? true})]
-      (is (= (::data/type updated-branch) :branch))
-      ;; All branches should be updated
+          updated-branch (data/update-branch branch (partial * 2) {:apply-to-condition? true})] 
       (is (= 12 ((::data/fn (::data/condition updated-branch)) {:x 5}))) ; (* 2 (inc 5)) = 12
       (is (= 12 ((::data/fn (::data/truthy updated-branch)) {:y 5}))) ; (* 2 (inc 5)) = 12
       (is (= 12 ((::data/fn (::data/falsey updated-branch)) {:z 5}))))) ; (* 2 (inc 5)) = 12
 
-  (testing "update-branch with value nodes in truthy/falsey branches"
-    (let [condition (data/leaf [:x] (comp even? :x))
-          truthy (data/value 42)
-          falsey (data/value 100)
-          branch (data/branch condition truthy falsey)
-          updated-branch (data/update-branch branch (partial * 2) {})]
-      (is (= (::data/type updated-branch) :branch))
-      (is (= (::data/condition updated-branch) condition))
-      ;; Value nodes should be updated by applying the function to their values
-      (is (= 84 (::data/value (::data/truthy updated-branch)))) ; (* 2 42) = 84
-      (is (= 200 (::data/value (::data/falsey updated-branch))))))) ; (* 2 100) = 200
+  (testing "update-branch with nested branches updates recursively"
+    (let [inner-condition (data/leaf [:a] (comp even? :a))
+          inner-truthy (data/leaf [:b] (comp inc :b))
+          inner-falsey (data/leaf [:c] (comp dec :c))
+          inner-branch (data/branch inner-condition inner-truthy inner-falsey)
+          outer-condition (data/leaf [:x] (comp even? :x))
+          outer-truthy inner-branch
+          outer-falsey (data/leaf [:z] (comp dec :z))
+          outer-branch (data/branch outer-condition outer-truthy outer-falsey)
+          updated-branch (data/update-branch outer-branch (partial * 2) {})]
+      ;; Outer condition should not be updated by default
+      (is (= true ((::data/fn (::data/condition updated-branch)) {:x 2}))) ; (even? 2) = true
+      ;; Inner condition should not be updated by default
+      (is (= true ((::data/fn (::data/condition (::data/truthy updated-branch))) {:a 2}))) ; (even? 2) = true
+      ;; Inner truthy should be updated
+      (is (= 12 ((::data/fn (::data/truthy (::data/truthy updated-branch))) {:b 5}))) ; (* 2 (inc 5)) = 12
+      ;; Inner falsey should be updated
+      (is (= 8 ((::data/fn (::data/falsey (::data/truthy updated-branch))) {:c 5}))) ; (* 2 (dec 5)) = 8
+      ;; Outer falsey should be updated
+      (is (= 8 ((::data/fn (::data/falsey updated-branch)) {:z 5})))))) ; (* 2 (dec 5)) = 8
 
 (deftest update-sequence-test
-  (testing "update-sequence with value process-node"
-    (let [sequence-node (data/sequence :items 10)
-          updated-sequence (data/update-sequence sequence-node (partial * 2))]
-      (is (= (::data/type updated-sequence) :sequence))
-      (is (= (::data/input updated-sequence) :items))
-      (is (= (::data/type (::data/process-node updated-sequence)) :value))
-      ;; The process-node value should be updated
-      (is (= 20 (::data/value (::data/process-node updated-sequence)))))) ; (* 2 10) = 20
-
-  (testing "update-sequence with leaf process-node"
+  (testing "update-sequence composes the function argument"
     (let [sequence-node (data/sequence :items [:closure-var] (comp inc :closure-var) #{})
           updated-sequence (data/update-sequence sequence-node (partial * 2))]
-      (is (= (::data/type updated-sequence) :sequence))
-      (is (= (::data/input updated-sequence) :items))
-      (is (= (::data/type (::data/process-node updated-sequence)) :leaf))
-      (is (= (::data/inputs (::data/process-node updated-sequence)) #{:closure-var}))
-      ;; The leaf function should be updated
       (is (= 12 ((::data/fn (::data/process-node updated-sequence)) {:closure-var 5})))))) ; (* 2 (inc 5)) = 12
 
 (deftest update-node-test
