@@ -98,10 +98,3 @@
            (reduce (fn [acc [k v]] (assoc acc k (protocols/-extract v)))
                    {}
                    (lazy-env/scheduled-nodes lazy-env)))))
-
-(comment
-
-  {:a (>leaf (throw (Exception. "My exception")))
-   :b (>leaf 2)
-   :c (>leaf (+ ?a ?b))}
-  )
