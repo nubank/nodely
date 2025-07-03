@@ -54,7 +54,7 @@
           truthy (data/leaf [:y] (comp inc :y))
           falsey (data/leaf [:z] (comp inc :z))
           branch (data/branch condition truthy falsey)
-          updated-branch (data/update-branch branch (partial * 2) {:apply-to-condition? true})] 
+          updated-branch (data/update-branch branch (partial * 2) {:apply-to-condition? true})]
       (is (= 12 ((::data/fn (::data/condition updated-branch)) {:x 5}))) ; (* 2 (inc 5)) = 12
       (is (= 12 ((::data/fn (::data/truthy updated-branch)) {:y 5}))) ; (* 2 (inc 5)) = 12
       (is (= 12 ((::data/fn (::data/falsey updated-branch)) {:z 5}))))) ; (* 2 (inc 5)) = 12

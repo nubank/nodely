@@ -6,7 +6,7 @@
    [clojure.test :refer :all]
    [criterium.core :as criterium]
    [matcher-combinators.matchers :as matchers]
-   [nodely.api.v0 :as api :refer [>leaf >sequence >value blocking >if]]
+   [nodely.api.v0 :as api :refer [>if >leaf >sequence >value blocking]]
    [nodely.test-helpers :as t]))
 
 (def env {:x (>value 2)
@@ -257,7 +257,7 @@
                             :z (>leaf (+ ?x ?y))}
               updated-env (update original-env :z api/update-node (partial * 2))]
           (t/matching 10 (api/eval-key updated-env :z {::api/engine engine-key}))))
-      
+
       (t/testing "update-node and then eval a key that is not affected by the update-node"
         (let [original-env {:x (>value 2)
                             :y (>value 3)
@@ -265,26 +265,26 @@
               updated-env (update original-env :z api/update-node (partial * 2))]
           (t/matching 2 (api/eval-key updated-env :x {::api/engine engine-key}))
           (t/matching 3 (api/eval-key updated-env :y {::api/engine engine-key}))))
-      
+
       (t/testing "update-node with value node"
         (let [original-env {:x (>value 5)
                             :y (>leaf (* ?x 2))}
               updated-env (update original-env :x api/update-node (partial + 3))]
           (t/matching 8 (api/eval-key updated-env :x {::api/engine engine-key}))
           (t/matching 16 (api/eval-key updated-env :y {::api/engine engine-key}))))
-      
+
       (t/testing "update-node with sequence node"
         (let [original-env {:x (>value [1 2 3])
                             :y (>sequence inc ?x)}
               updated-env (update original-env :y api/update-node (fn [f] (comp (partial * 2) f)))]
           (t/matching [4 6 8] (api/eval-key updated-env :y {::api/engine engine-key}))))
-      
+
       (t/testing "update-node with branch node"
         (let [original-env {:x (>value 5)
                             :y (>if (>leaf (even? ?x)) (>value "even") (>value "odd"))}
               updated-env (update original-env :y api/update-node (partial str "result: "))]
           (t/matching "result: odd" (api/eval-key updated-env :y {::api/engine engine-key}))))
-      
+
       (t/testing "update-node with apply-to-condition option"
         (let [original-env {:x (>value 0)
                             :y (>if (>leaf ?x) (>value -10) (>value 20))}
