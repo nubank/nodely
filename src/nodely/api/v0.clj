@@ -25,6 +25,7 @@
 (import-fn nodely.engine.lazy/eval-node-with-values eval-node-with-values)
 (import-fn nodely.data/merge-values merge-values)
 (import-fn nodely.data/get-value get-value)
+(import-fn nodely.data/update-node update-node)
 
 (def virtual-future-failure
   (delay

@@ -33,10 +33,10 @@
           updated-leaf (data/update-leaf original-leaf (partial * 2))
           expected-props {::data/type   :leaf
                           ::data/inputs #{:x}}]
-      (is (= expected-props (select-keys updated-leaf (keys expected-props)))
-          "update-leaf should preserve other leaf properties")
-      (is (= 12 ((::data/fn updated-leaf) {:x 5}))
-          "update-leaf should modify the function by composing with the given function"))))
+      ; update-leaf should preserve other leaf properties
+      (is (= expected-props (select-keys updated-leaf (keys expected-props))))
+      ; update-leaf should modify the function by composing with the given function
+      (is (= 12 ((::data/fn updated-leaf) {:x 5}))))))
 
 (deftest update-branch-test
   (testing "update-branch without apply-to-condition updates truthy and falsey branches"
