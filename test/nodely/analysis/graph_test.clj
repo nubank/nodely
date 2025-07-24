@@ -6,6 +6,7 @@
    [clojure.test.check.properties :as prop]
    [matcher-combinators.test :refer [match?]]
    [nodely.analysis.graph :as graph]
+   [nodely.data :as data]
    [nodely.fixtures :as fixtures]
    [nodely.syntax :as syntax :refer [>and >cond >if >leaf >or >sequence >value]]
    [schema.test]))
@@ -60,17 +61,17 @@
           leaf-node (>leaf (+ ?a ?b))
           branch-node (>if value-node leaf-node value-node)]
 
-      (is (graph/value-node? value-node))
-      (is (not (graph/value-node? leaf-node)))
-      (is (not (graph/value-node? branch-node)))
+      (is (data/value? value-node))
+      (is (not (data/value? leaf-node)))
+      (is (not (data/value? branch-node)))
 
-      (is (graph/leaf-node? leaf-node))
-      (is (not (graph/leaf-node? value-node)))
-      (is (not (graph/leaf-node? branch-node)))
+      (is (data/leaf? leaf-node))
+      (is (not (data/leaf? value-node)))
+      (is (not (data/leaf? branch-node)))
 
-      (is (graph/branch-node? branch-node))
-      (is (not (graph/branch-node? value-node)))
-      (is (not (graph/branch-node? leaf-node))))))
+      (is (data/branch? branch-node))
+      (is (not (data/branch? value-node)))
+      (is (not (data/branch? leaf-node))))))
 
 (deftest else-condition-test
   (testing "else condition detection"
@@ -78,10 +79,10 @@
           regular-node (>value 42)
           leaf-node (>leaf (inc ?x))]
 
-      (is (graph/else-condition? else-node))
-      (is (not (graph/else-condition? regular-node)))
-      (is (not (graph/else-condition? leaf-node)))
-      (is (not (graph/else-condition? nil))))))
+      (is (data/else-condition? else-node))
+      (is (not (data/else-condition? regular-node)))
+      (is (not (data/else-condition? leaf-node)))
+      (is (not (data/else-condition? nil))))))
 
 (deftest branch-parts-extraction-test
   (testing "branch parts extraction"

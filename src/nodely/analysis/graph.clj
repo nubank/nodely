@@ -1,7 +1,8 @@
 (ns nodely.analysis.graph
   (:require
    [clojure.set]
-   [clojure.string :as str]))
+   [clojure.string :as str]
+   [nodely.data :as data]))
 
 ;; Configuration constants
 (def ^:const DEFAULT-MAX-RECURSION-DEPTH 100)
@@ -31,73 +32,62 @@
     :condition (str prefix "-condition-" value-or-deps-str)
     (str prefix "-" value-or-deps-str)))
 
-;; Node type checking utilities
-(defn value-node?
-  "Check if a node is a value node."
-  [node]
-  (= (:nodely.data/type node) :value))
-
-(defn leaf-node?
-  "Check if a node is a leaf node."
-  [node]
-  (= (:nodely.data/type node) :leaf))
-
-(defn branch-node?
-  "Check if a node is a branch node."
-  [node]
-  (= (:nodely.data/type node) :branch))
-
-(defn else-condition?
-  "Check if a condition represents an :else clause."
-  [condition]
-  (and condition
-       (value-node? condition)
-       (= (:nodely.data/value condition) :else)))
+(defn is-embedded-node?
+  "Check if a node name represents an embedded node (contains -truthy-, -falsey-, or -else-)."
+  [node-name]
+  (let [name-str (if (keyword? node-name) (name node-name) (str node-name))]
+    (or (str/includes? name-str "-truthy-")
+        (str/includes? name-str "-falsey-")
+        (str/includes? name-str "-else-"))))
 
 ;; Node part extraction utilities
 
 (defn extract-branch-parts
   "Extract condition, truthy, and falsey parts from a branch node."
   [node]
-  {:condition (:nodely.data/condition node)
-   :truthy (:nodely.data/truthy node)
-   :falsey (:nodely.data/falsey node)})
+  {:condition (data/branch-condition node)
+   :truthy (data/branch-truthy node)
+   :falsey (data/branch-falsey node)})
 
 (defn is-else-branch?
   "Check if a node represents an else branch (condition is :else)."
   [node]
-  (else-condition? (:nodely.data/condition node)))
+  (data/else-condition? (data/branch-condition node)))
 
 (defn find-nested-else-condition
   "Find nested else conditions up to a maximum depth."
   [node-def max-depth]
   (loop [current-node node-def depth 0]
     (when (and current-node (< depth max-depth))
-      (let [condition (get-in current-node [:nodely.data/falsey :nodely.data/condition])]
-        (if (else-condition? condition)
+      (let [falsey (data/branch-falsey current-node)
+            condition (when falsey (data/branch-condition falsey))]
+        (if (data/else-condition? condition)
           condition
-          (recur (:nodely.data/falsey current-node) (inc depth)))))))
+          (recur falsey (inc depth)))))))
 
 (defn detect-branch-patterns
   "Detect >and, >or, and >cond patterns in a branch node.
    Returns a map with :and?, :or?, :cond-else? keys."
   [node-def]
-  (when (branch-node? node-def)
+  (when (data/branch? node-def)
     (let [{:keys [condition truthy falsey]} (extract-branch-parts node-def)
 
           ;; Check for deeply nested else conditions to detect >cond
           is-cond-else? (boolean (find-nested-else-condition node-def 3))
 
           ;; Detect >and pattern: condition and falsey are identical, truthy contains next condition
+          condition-inputs (when condition (data/node-inputs condition))
+          falsey-inputs (when falsey (data/node-inputs falsey))
           is-and-pattern? (and condition truthy falsey
-                               (= (:nodely.data/inputs condition) (:nodely.data/inputs falsey))
-                               (branch-node? truthy)
+                               (= condition-inputs falsey-inputs)
+                               (data/branch? truthy)
                                (not is-cond-else?))
 
           ;; Detect >or pattern: condition and truthy are identical, falsey contains next option
+          truthy-inputs (when truthy (data/node-inputs truthy))
           is-or-pattern? (and condition truthy falsey
-                              (= (:nodely.data/inputs condition) (:nodely.data/inputs truthy))
-                              (branch-node? falsey)
+                              (= condition-inputs truthy-inputs)
+                              (data/branch? falsey)
                               (not is-cond-else?))]
 
       {:and? is-and-pattern?
@@ -106,61 +96,29 @@
 
 ;; Graph extraction functions
 
-(defn extract-dependencies-from-node
-  "Extract dependency keywords from a node's :nodely.data/inputs field.
-   Returns a set of keywords representing dependencies."
-  [node]
-  (cond
-    ;; For branch nodes, collect inputs from all possible branch parts
-    (branch-node? node)
-    (let [;; Handle >if style branches (condition, truthy, falsey)
-          condition-inputs (get-in node [:nodely.data/condition :nodely.data/inputs] #{})
-          truthy-inputs (get-in node [:nodely.data/truthy :nodely.data/inputs] #{})
-          falsey-inputs (get-in node [:nodely.data/falsey :nodely.data/inputs] #{})
-
-          ;; Handle >cond, >or, >and style branches (which are nested >if branches)
-          ;; For nested branches, we need to recursively collect inputs from BOTH truthy and falsey
-          nested-truthy-inputs (if (branch-node? (:nodely.data/truthy node))
-                                 (extract-dependencies-from-node (:nodely.data/truthy node))
-                                 #{})
-          nested-falsey-inputs (if (branch-node? (:nodely.data/falsey node))
-                                 (extract-dependencies-from-node (:nodely.data/falsey node))
-                                 #{})]
-      (clojure.set/union condition-inputs truthy-inputs falsey-inputs nested-truthy-inputs nested-falsey-inputs))
-
-    ;; For sequence nodes, get :nodely.data/input (singular) - contains the sequential dependency
-    (= (:nodely.data/type node) :sequence)
-    (if-let [input (:nodely.data/input node)]
-      #{input}
-      #{})
-
-    ;; For regular nodes, get :nodely.data/inputs directly
-    (:nodely.data/inputs node)
-    (:nodely.data/inputs node)
-
-    ;; Default to empty set
-    :else #{}))
-
 (defn extract-node-info
   "Extract information about a single node including its type and dependencies."
   [node-key node-def]
-  (let [node-type (:nodely.data/type node-def)
+  (let [node-type (data/node-type node-def)
         base-info {:id node-key
                    :type node-type
-                   :dependencies (extract-dependencies-from-node node-def)}]
+                   :dependencies (data/node-all-inputs node-def)}]
     (case node-type
-      :value (assoc base-info :value (:nodely.data/value node-def))
+      :value (assoc base-info :value (data/node-value node-def))
       :leaf (assoc base-info
-                   :fn-present (boolean (:nodely.data/fn node-def))
-                   :inputs (:nodely.data/inputs node-def))
-      :branch (assoc base-info
-                     :condition-deps (get-in node-def [:nodely.data/condition :nodely.data/inputs] #{})
-                     :truthy-deps (get-in node-def [:nodely.data/truthy :nodely.data/inputs] #{})
-                     :falsey-deps (get-in node-def [:nodely.data/falsey :nodely.data/inputs] #{}))
+                   :fn-present (boolean (::data/fn node-def))
+                   :inputs (data/node-inputs node-def))
+      :branch (let [condition (data/branch-condition node-def)
+                    truthy (data/branch-truthy node-def)
+                    falsey (data/branch-falsey node-def)]
+                (assoc base-info
+                       :condition-deps (if condition (data/node-inputs condition) #{})
+                       :truthy-deps (if truthy (data/node-inputs truthy) #{})
+                       :falsey-deps (if falsey (data/node-inputs falsey) #{})))
       :sequence (assoc base-info
-                       :process-node-present (boolean (:nodely.data/process-node node-def))
-                       :input (:nodely.data/input node-def)
-                       :sequential-input (:nodely.data/input node-def)) ; sequence nodes have one sequential input
+                       :process-node-present (boolean (::data/process-node node-def))
+                       :input (data/sequence-input node-def)
+                       :sequential-input (data/sequence-input node-def)) ; sequence nodes have one sequential input
       :unresolved (assoc base-info :value nil)
       base-info)))
 
@@ -172,7 +130,7 @@
 (defn should-extract-embedded-nodes?
   "Check if we should extract embedded nodes for a given branch node."
   [node-def]
-  (when (branch-node? node-def)
+  (when (data/branch? node-def)
     (let [{:keys [and? or?]} (detect-branch-patterns node-def)]
       ;; Only extract embedded nodes for IF and COND branches, not AND/OR
       (not (or and? or?)))))
@@ -202,139 +160,130 @@
   "Find which branch number(s) a dependency belongs to in a >cond structure.
    Returns a vector of branch numbers (starting from 1)."
   [node from]
-  (let [find-branch-nums
-        (fn find-nums [node branch-num]
-          (let [current-condition (get-in node [:nodely.data/condition])
-                condition-inputs (get-in node [:nodely.data/condition :nodely.data/inputs] #{})
-                truthy-inputs (get-in node [:nodely.data/truthy :nodely.data/inputs] #{})
-                falsey-node (get-in node [:nodely.data/falsey])
-                falsey-inputs (get-in node [:nodely.data/falsey :nodely.data/inputs] #{})
-                is-else-branch? (and current-condition
-                                     (= (:nodely.data/type current-condition) :value)
-                                     (= (:nodely.data/value current-condition) :else))
+  (letfn [(find-nums [node from branch-num acc]
+            (let [current-condition (data/branch-condition node)
+                  condition-inputs (if-let [condition (data/branch-condition node)] (data/node-inputs condition) #{})
+                  truthy-inputs (if-let [truthy (data/branch-truthy node)] (data/node-inputs truthy) #{})
+                  falsey-node (data/branch-falsey node)
+                  falsey-inputs (if-let [falsey (data/branch-falsey node)] (data/node-inputs falsey) #{})
+                  is-else-branch? (data/else-condition? current-condition)
 
-                ;; Check if dependency is in current branch
-                in-condition? (contains? condition-inputs from)
-                in-truthy? (contains? truthy-inputs from)
-                in-falsey? (contains? falsey-inputs from)
+                  ;; Check if dependency is in current branch
+                  in-condition? (contains? condition-inputs from)
+                  in-truthy? (contains? truthy-inputs from)
+                  in-falsey? (contains? falsey-inputs from)
 
-                ;; Collect branch numbers for current level
-                current-nums (cond
-                               ;; If it's an else branch, don't assign a number (it's the final else)
-                               is-else-branch? (if (or in-condition? in-truthy?) ["else"] [])
-                               ;; If dependency is in condition or truthy, it belongs to current branch
-                               (or in-condition? in-truthy?) [branch-num]
-                               ;; If in falsey (and not else), it's also current branch for some cases
-                               in-falsey? [branch-num]
-                               :else [])
+                  ;; Collect branch numbers for current level
+                  current-nums (cond
+                                 ;; If it's an else branch, don't assign a number (it's the final else)
+                                 is-else-branch? (if (or in-condition? in-truthy?) ["else"] [])
+                                 ;; If dependency is in condition or truthy, it belongs to current branch
+                                 (or in-condition? in-truthy?) [branch-num]
+                                 ;; If in falsey (and not else), it's also current branch for some cases
+                                 in-falsey? [branch-num]
+                                 :else [])
 
-                ;; Recursively check nested branches
-                nested-nums (if (and falsey-node (= (:nodely.data/type falsey-node) :branch))
-                              (find-nums falsey-node (if is-else-branch? branch-num (inc branch-num)))
-                              [])]
+                  updated-acc (concat acc current-nums)]
 
-            (concat current-nums nested-nums)))]
-
-    (vec (find-branch-nums node 1))))
+              ;; Recursively check nested branches (tail call optimized)
+              (if (and falsey-node (data/branch? falsey-node))
+                (find-nums falsey-node from (if is-else-branch? branch-num (inc branch-num)) updated-acc)
+                updated-acc)))]
+    (vec (find-nums node from 1 []))))
 
 (defn find-cond-branch-label
   "Find the appropriate label for a dependency in a >cond branch structure.
    >cond creates nested >if structures with :else markers."
   [node from]
-  (let [find-cond-label
-        (fn find-label [node branch-num]
-          (let [current-condition (get-in node [:nodely.data/condition])
-                condition-inputs (get-in node [:nodely.data/condition :nodely.data/inputs] #{})
-                truthy-inputs (get-in node [:nodely.data/truthy :nodely.data/inputs] #{})
-                falsey-node (get-in node [:nodely.data/falsey])
-                falsey-inputs (get-in node [:nodely.data/falsey :nodely.data/inputs] #{})
-                is-else-branch? (and current-condition
-                                     (= (:nodely.data/type current-condition) :value)
-                                     (= (:nodely.data/value current-condition) :else))]
-            (cond
-              (contains? condition-inputs from)
-              (if is-else-branch? "else" "cond-expr")
+  (letfn [(find-label [node from branch-num]
+            (let [current-condition (data/branch-condition node)
+                  condition-inputs (if-let [condition (data/branch-condition node)] (data/node-inputs condition) #{})
+                  truthy-inputs (if-let [truthy (data/branch-truthy node)] (data/node-inputs truthy) #{})
+                  falsey-node (data/branch-falsey node)
+                  falsey-inputs (if-let [falsey (data/branch-falsey node)] (data/node-inputs falsey) #{})
+                  is-else-branch? (data/else-condition? current-condition)]
+              (cond
+                (contains? condition-inputs from)
+                (if is-else-branch? "else" "cond-expr")
 
-              (contains? truthy-inputs from)
-              (if is-else-branch? "else" "cond-expr")
+                (contains? truthy-inputs from)
+                (if is-else-branch? "else" "cond-expr")
 
-              (and falsey-node (= (:nodely.data/type falsey-node) :branch))
-              (find-label falsey-node (inc branch-num))
+                (and falsey-node (data/branch? falsey-node))
+                (find-label falsey-node from (inc branch-num))
 
-              (contains? falsey-inputs from)
-              "else"
+                (contains? falsey-inputs from)
+                "else"
 
-              :else nil)))]
-    (find-cond-label node 1)))
+                :else nil)))]
+    (find-label node from 1)))
 
 (defn find-or-branch-label
   "Find the appropriate label for a dependency in an >or branch structure.
    >or evaluates left-to-right and returns the first truthy value.
    Structure: condition=truthy (first option), falsey contains next option."
   [node from]
-  (let [find-or-label
-        (fn find-label [node branch-num]
-          (let [condition-inputs (get-in node [:nodely.data/condition :nodely.data/inputs] #{})
-                truthy-inputs (get-in node [:nodely.data/truthy :nodely.data/inputs] #{})
-                falsey-node (get-in node [:nodely.data/falsey])
-                falsey-inputs (get-in node [:nodely.data/falsey :nodely.data/inputs] #{})]
-            (cond
-              ;; Check if dependency is in the current option (condition/truthy should be same)
-              (contains? condition-inputs from)
-              "or"
+  (letfn [(find-label [node from branch-num]
+            (let [condition-inputs (if-let [condition (data/branch-condition node)] (data/node-inputs condition) #{})
+                  truthy-inputs (if-let [truthy (data/branch-truthy node)] (data/node-inputs truthy) #{})
+                  falsey-node (data/branch-falsey node)
+                  falsey-inputs (if-let [falsey (data/branch-falsey node)] (data/node-inputs falsey) #{})]
+              (cond
+                ;; Check if dependency is in the current option (condition/truthy should be same)
+                (contains? condition-inputs from)
+                "or"
 
-              (contains? truthy-inputs from)
-              "or"
+                (contains? truthy-inputs from)
+                "or"
 
-              ;; If falsey is a branch, recurse to next option
-              (and falsey-node (= (:nodely.data/type falsey-node) :branch))
-              (find-label falsey-node (inc branch-num))
+                ;; If falsey is a branch, recurse to next option
+                (and falsey-node (data/branch? falsey-node))
+                (find-label falsey-node from (inc branch-num))
 
-              ;; If falsey is a value (final fallback), check if it matches
-              (contains? falsey-inputs from)
-              "or"
+                ;; If falsey is a value (final fallback), check if it matches
+                (contains? falsey-inputs from)
+                "or"
 
-              :else nil)))]
-    (find-or-label node 1)))
+                :else nil)))]
+    (find-label node from 1)))
 
 (defn find-and-branch-label
   "Find the appropriate label for a dependency in an >and branch structure.
    >and evaluates left-to-right and returns the first falsy value, or the last value if all are truthy.
    Structure: condition=falsey (current check), truthy contains next condition."
   [node from]
-  (let [find-and-label
-        (fn find-label [node branch-num]
-          (let [condition-inputs (get-in node [:nodely.data/condition :nodely.data/inputs] #{})
-                truthy-node (get-in node [:nodely.data/truthy])
-                truthy-inputs (get-in node [:nodely.data/truthy :nodely.data/inputs] #{})
-                falsey-inputs (get-in node [:nodely.data/falsey :nodely.data/inputs] #{})
+  (letfn [(find-label [node from branch-num]
+            (let [condition-inputs (if-let [condition (data/branch-condition node)] (data/node-inputs condition) #{})
+                  truthy-node (data/branch-truthy node)
+                  truthy-inputs (if-let [truthy (data/branch-truthy node)] (data/node-inputs truthy) #{})
+                  falsey-inputs (if-let [falsey (data/branch-falsey node)] (data/node-inputs falsey) #{})
 
-                ;; Also check nested dependencies in truthy branch
-                all-truthy-deps (if truthy-node (extract-dependencies-from-node truthy-node) #{})]
-            (cond
-              ;; Check if dependency is in the current condition
-              (contains? condition-inputs from)
-              "and"
+                  ;; Also check nested dependencies in truthy branch
+                  all-truthy-deps (if truthy-node (data/node-all-inputs truthy-node) #{})]
+              (cond
+                ;; Check if dependency is in the current condition
+                (contains? condition-inputs from)
+                "and"
 
-              ;; Check if dependency is in the falsey (same as condition for >and)
-              (contains? falsey-inputs from)
-              "and"
+                ;; Check if dependency is in the falsey (same as condition for >and)
+                (contains? falsey-inputs from)
+                "and"
 
-              ;; Check if dependency is anywhere in the truthy branch (including nested)
-              (contains? all-truthy-deps from)
-              (if (and truthy-node (= (:nodely.data/type truthy-node) :branch))
-                ;; If truthy is a branch, recurse to get the proper nested label
-                (let [recursive-result (find-label truthy-node (inc branch-num))]
-                  (or recursive-result "and"))
-                ;; If truthy is a leaf, it's the next condition
-                "and")
+                ;; Check if dependency is anywhere in the truthy branch (including nested)
+                (contains? all-truthy-deps from)
+                (if (and truthy-node (data/branch? truthy-node))
+                  ;; If truthy is a branch, recurse to get the proper nested label
+                  (let [recursive-result (find-label truthy-node from (inc branch-num))]
+                    (or recursive-result "and"))
+                  ;; If truthy is a leaf, it's the next condition
+                  "and")
 
-              ;; If truthy is a leaf (final result), check if it matches directly
-              (contains? truthy-inputs from)
-              "and"
+                ;; If truthy is a leaf (final result), check if it matches directly
+                (contains? truthy-inputs from)
+                "and"
 
-              :else nil)))]
-    (find-and-label node 1)))
+                :else nil)))]
+    (find-label node from 1)))
 
 ;; Embedded node extraction functions
 
@@ -349,14 +298,14 @@
   "Create embedded node entry for a value node."
   [node prefix branch-type]
   (create-embedded-node-entry node prefix branch-type
-                              (fn [node] (value-to-identifier (:nodely.data/value node)))))
+                              (fn [node] (value-to-identifier (data/node-value node)))))
 
 (defn create-embedded-leaf-node
   "Create embedded node entry for a leaf node."
   [node prefix branch-type]
   (create-embedded-node-entry node prefix branch-type
                               (fn [node]
-                                (let [deps (:nodely.data/inputs node)]
+                                (let [deps (data/node-inputs node)]
                                   (if (seq deps)
                                     (str/join "-" (map name deps))
                                     "inline-expr")))))
@@ -365,9 +314,9 @@
   "Check if a condition node should be extracted as embedded."
   [condition-node is-else-branch?]
   (and condition-node
-       (leaf-node? condition-node)
+       (data/leaf? condition-node)
        (not is-else-branch?)
-       (let [deps (:nodely.data/inputs condition-node)
+       (let [deps (data/node-inputs condition-node)
              has-complex-logic? (> (count deps) 2)]
          has-complex-logic?)))
 
@@ -380,16 +329,16 @@
 (defn should-extract-truthy-directly?
   "Check if truthy node should be extracted directly."
   [truthy-node]
-  (or (value-node? truthy-node)
-      (leaf-node? truthy-node)))
+  (or (data/value? truthy-node)
+      (data/leaf? truthy-node)))
 
 (defn extract-nested-truthy-result
   "Extract result from nested truthy branch."
   [truthy-node prefix depth extract-values-fn]
-  (let [nested-truthy (:nodely.data/truthy truthy-node)]
+  (let [nested-truthy (data/branch-truthy truthy-node)]
     (when (and nested-truthy
-               (or (= (:nodely.data/type nested-truthy) :value)
-                   (= (:nodely.data/type nested-truthy) :leaf)))
+               (or (= nested-truthy :value)
+                   (= nested-truthy :leaf)))
       (extract-values-fn nested-truthy prefix :truthy (inc depth)))))
 
 (defn extract-truthy-embedded
@@ -402,7 +351,7 @@
                          (if is-else-branch? :else :truthy)
                          (inc depth))
 
-      (= (:nodely.data/type truthy-node) :branch)
+      (data/branch? truthy-node)
       (extract-nested-truthy-result truthy-node prefix depth extract-values-fn)
 
       :else nil)))
@@ -410,14 +359,14 @@
 (defn should-skip-nil-falsey?
   "Check if falsey node should be skipped (nil placeholder)."
   [falsey-node]
-  (and (= (:nodely.data/type falsey-node) :value)
-       (nil? (:nodely.data/value falsey-node))))
+  (and (= (data/node-type falsey-node) :value)
+       (nil? (data/node-value falsey-node))))
 
 (defn should-extract-falsey-directly?
   "Check if falsey node should be extracted directly."
   [falsey-node]
-  (or (= (:nodely.data/type falsey-node) :value)
-      (= (:nodely.data/type falsey-node) :leaf)))
+  (or (= (data/node-type falsey-node) :value)
+      (= (data/node-type falsey-node) :leaf)))
 
 (defn should-recurse-falsey?
   "Check if we should recurse into falsey branch."
@@ -442,13 +391,13 @@
   [node-def node-id-prefix]
   (let [extract-values
         (fn extract-values [node prefix branch-type depth]
-          (case (:nodely.data/type node)
+          (case (data/node-type node)
             :value (create-embedded-value-node node prefix branch-type)
             :leaf (create-embedded-leaf-node node prefix branch-type)
             :branch
-            (let [condition-node (:nodely.data/condition node)
-                  truthy-node (:nodely.data/truthy node)
-                  falsey-node (:nodely.data/falsey node)
+            (let [condition-node (data/branch-condition node)
+                  truthy-node (data/branch-truthy node)
+                  falsey-node (data/branch-falsey node)
                   is-else-branch? (is-else-branch? node)
 
                   condition-embedded (extract-condition-embedded condition-node prefix depth is-else-branch? extract-values)
@@ -500,16 +449,16 @@
   "Check if we should create an edge from condition node."
   [condition-node is-else-branch?]
   (and condition-node
-       (= (:nodely.data/type condition-node) :leaf)
+       (= (data/node-type condition-node) :leaf)
        (not is-else-branch?)
-       (let [deps (:nodely.data/inputs condition-node)
+       (let [deps (data/node-inputs condition-node)
              has-complex-logic? (> (count deps) 2)]
          has-complex-logic?)))
 
 (defn create-condition-edge
   "Create edge from condition node to branch."
   [condition-node prefix node-id embedded-nodes]
-  (let [deps (:nodely.data/inputs condition-node)
+  (let [deps (data/node-inputs condition-node)
         deps-str (if (seq deps)
                    (str/join "-" (map name deps))
                    "inline-expr")
@@ -547,18 +496,18 @@
 (defn create-truthy-edge-direct
   "Create edge from truthy node (direct value/leaf) to branch."
   [truthy-node prefix node-id embedded-nodes is-else-branch?]
-  (let [truthy-key (if (= (:nodely.data/type truthy-node) :value)
-                     (create-value-node-key (:nodely.data/value truthy-node) prefix is-else-branch?)
-                     (create-leaf-node-key (:nodely.data/inputs truthy-node) prefix is-else-branch?))]
+  (let [truthy-key (if (= (data/node-type truthy-node) :value)
+                     (create-value-node-key (data/node-value truthy-node) prefix is-else-branch?)
+                     (create-leaf-node-key (data/node-inputs truthy-node) prefix is-else-branch?))]
     (when (contains? embedded-nodes truthy-key)
       [[truthy-key node-id]])))
 
 (defn create-nested-truthy-key
   "Create key for nested truthy node."
   [nested-truthy prefix]
-  (let [identifier (if (= (:nodely.data/type nested-truthy) :value)
-                     (value-to-identifier (:nodely.data/value nested-truthy))
-                     (let [deps (:nodely.data/inputs nested-truthy)]
+  (let [identifier (if (= nested-truthy :value)
+                     (value-to-identifier (data/node-value nested-truthy))
+                     (let [deps (data/node-inputs nested-truthy)]
                        (if (seq deps)
                          (str/join "-" (map name deps))
                          "inline-expr")))]
@@ -567,10 +516,10 @@
 (defn create-truthy-edge-nested
   "Create edge from nested truthy branch result to branch."
   [truthy-node prefix node-id embedded-nodes]
-  (let [nested-truthy (:nodely.data/truthy truthy-node)]
+  (let [nested-truthy (data/branch-truthy truthy-node)]
     (when (and nested-truthy
-               (or (= (:nodely.data/type nested-truthy) :value)
-                   (= (:nodely.data/type nested-truthy) :leaf)))
+               (or (= nested-truthy :value)
+                   (= nested-truthy :leaf)))
       (let [nested-key (create-nested-truthy-key nested-truthy prefix)]
         (when (contains? embedded-nodes nested-key)
           [[nested-key node-id]])))))
@@ -578,8 +527,8 @@
 (defn should-create-truthy-edge-direct?
   "Check if truthy node should create direct edge."
   [truthy-node]
-  (or (= (:nodely.data/type truthy-node) :value)
-      (= (:nodely.data/type truthy-node) :leaf)))
+  (or (= (data/node-type truthy-node) :value)
+      (= (data/node-type truthy-node) :leaf)))
 
 (defn extract-truthy-edges
   "Extract edges from truthy nodes to branch."
@@ -589,7 +538,7 @@
       (should-create-truthy-edge-direct? truthy-node)
       (create-truthy-edge-direct truthy-node prefix node-id embedded-nodes is-else-branch?)
 
-      (= (:nodely.data/type truthy-node) :branch)
+      (data/branch? truthy-node)
       (create-truthy-edge-nested truthy-node prefix node-id embedded-nodes)
 
       :else nil)))
@@ -597,15 +546,15 @@
 (defn should-skip-falsey-edge?
   "Check if falsey edge should be skipped (nil placeholder)."
   [falsey-node]
-  (and (= (:nodely.data/type falsey-node) :value)
-       (nil? (:nodely.data/value falsey-node))))
+  (and (= (data/node-type falsey-node) :value)
+       (nil? (data/node-value falsey-node))))
 
 (defn create-falsey-edge-key
   "Create key for falsey node edge."
   [falsey-node prefix]
-  (let [identifier (if (= (:nodely.data/type falsey-node) :value)
-                     (value-to-identifier (:nodely.data/value falsey-node))
-                     (let [deps (:nodely.data/inputs falsey-node)]
+  (let [identifier (if (= (data/node-type falsey-node) :value)
+                     (value-to-identifier (data/node-value falsey-node))
+                     (let [deps (data/node-inputs falsey-node)]
                        (if (seq deps)
                          (str/join "-" (map name deps))
                          "inline-expr")))]
@@ -615,8 +564,8 @@
   "Extract edges from falsey nodes to branch."
   [falsey-node prefix node-id embedded-nodes]
   (when (and falsey-node
-             (or (= (:nodely.data/type falsey-node) :value)
-                 (= (:nodely.data/type falsey-node) :leaf))
+             (or (= (data/node-type falsey-node) :value)
+                 (= (data/node-type falsey-node) :leaf))
              (not (should-skip-falsey-edge? falsey-node)))
     (let [falsey-key (create-falsey-edge-key falsey-node prefix)]
       (when (contains? embedded-nodes falsey-key)
@@ -626,7 +575,7 @@
   "Check if we should recurse into nested branch edges."
   [falsey-node depth]
   (and falsey-node
-       (branch-node? falsey-node)
+       (data/branch? falsey-node)
        (< depth DEFAULT-MAX-EDGE-RECURSION-DEPTH)))
 
 (defn extract-nested-edges
@@ -641,11 +590,11 @@
   [env embedded-nodes]
   (let [extract-edges
         (fn extract-edges [node-id node-def prefix depth]
-          (case (:nodely.data/type node-def)
+          (case (data/node-type node-def)
             :branch
-            (let [condition-node (:nodely.data/condition node-def)
-                  truthy-node (:nodely.data/truthy node-def)
-                  falsey-node (:nodely.data/falsey node-def)
+            (let [condition-node (data/branch-condition node-def)
+                  truthy-node (data/branch-truthy node-def)
+                  falsey-node (data/branch-falsey node-def)
                   is-else-branch? (is-else-branch? node-def)
 
                   condition-edges (extract-condition-edges condition-node prefix node-id embedded-nodes is-else-branch?)
@@ -658,7 +607,7 @@
 
     (vec (apply concat
                 (for [[node-id node-def] env
-                      :when (= (:nodely.data/type node-def) :branch)]
+                      :when (= (data/node-type node-def) :branch)]
                   (extract-edges node-id node-def (name node-id) 0))))))
 
 (defn should-include-result-edge?
@@ -666,7 +615,7 @@
   [to env]
   (let [to-node-def (get env to)]
     ;; Check if this is an AND or OR branch
-    (if (and to-node-def (= (:nodely.data/type to-node-def) :branch))
+    (if (and to-node-def (= (data/node-type to-node-def) :branch))
       (let [{:keys [and? or?]} (detect-branch-patterns to-node-def)]
         ;; For AND and OR branches, don't include embedded result edges
         (not (or and? or?)))
@@ -684,7 +633,7 @@
 (defn extract-graph-structure
   "Extract the complete graph structure from a nodely environment.
    Returns {:nodes {node-id -> node-info}, :edges [[from to] ...]}
-   
+
    Options:
    - :include-embedded-nodes? - Whether to extract embedded nodes from branch structures (default: false)"
   [env & {:keys [include-embedded-nodes?] :or {include-embedded-nodes? false}}]

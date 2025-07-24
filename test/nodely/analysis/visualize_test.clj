@@ -14,9 +14,11 @@
 (use-fixtures :once schema.test/validate-schemas)
 
 ;; Mock functions with arrows for testing function name extraction
-(defn user-profile->json [_])
+(defn user-profile->json [profile]
+  (str "{\"name\":\"" (:name profile) "\",\"department\":\"" (:department profile) "\"}"))
 
-(defn json<-map [_])
+(defn json<-map [profile]
+  (str profile))
 
 ;; =============================================================================
 ;; TEST DATA AND FIXTURES
@@ -175,14 +177,14 @@
 
 (deftest embedded-node-detection-test
   (testing "embedded node identification"
-    (is (viz/is-embedded-node? :node-truthy-value))
-    (is (viz/is-embedded-node? :node-falsey-expr))
-    (is (viz/is-embedded-node? :test-else-result))
-    (is (viz/is-embedded-node? "branch-truthy-condition"))
-    (is (not (viz/is-embedded-node? :regular-node)))
-    (is (not (viz/is-embedded-node? :node-with-truthy)))
-    (is (not (viz/is-embedded-node? :truthy-node)))
-    (is (not (viz/is-embedded-node? :falsey-node)))))
+    (is (graph/is-embedded-node? :node-truthy-value))
+    (is (graph/is-embedded-node? :node-falsey-expr))
+    (is (graph/is-embedded-node? :test-else-result))
+    (is (graph/is-embedded-node? "branch-truthy-condition"))
+    (is (not (graph/is-embedded-node? :regular-node)))
+    (is (not (graph/is-embedded-node? :node-with-truthy)))
+    (is (not (graph/is-embedded-node? :truthy-node)))
+    (is (not (graph/is-embedded-node? :falsey-node)))))
 
 (deftest embedded-node-name-creation-test
   (testing "embedded node name creation"
@@ -269,38 +271,6 @@
     (is (pos-int? viz/DEFAULT-MAX-EDGE-RECURSION-DEPTH))
     (is (pos-int? viz/DEFAULT-STRING-TRUNCATION-LENGTH))
     (is (pos-int? viz/DEFAULT-PREVIEW-TRUNCATION-LENGTH))))
-
-(deftest extract-leaf-function-names-test
-  (testing "leaf function name extraction from source"
-    ;; Test with nil/invalid source path
-    (let [result (viz/extract-leaf-function-names nil)]
-      (is (map? result)))
-
-    ;; Test with non-existent file
-    (let [result (viz/extract-leaf-function-names "/non/existent/file.clj")]
-      (is (map? result)))))
-
-(deftest function-name-extraction-with-source-test
-  (testing "function name extraction when source content is available"
-    ;; Test the actual function name extraction logic
-    (let [mock-source-content ":user-age (>value 25)
-                               :is-adult (>leaf (>= :user-age 18))
-                               :greeting (>leaf (str \"Hello \" :user-name))"
-          extracted-names (viz/extract-leaf-function-names nil)] ; This will return empty since no file
-
-      ;; Test that extraction returns a map (even if empty when no source file)
-      (is (map? extracted-names))
-
-      ;; Test the regex pattern directly
-      (let [pattern #":([a-zA-Z0-9-]+)\s*\(>leaf\s*\(([a-zA-Z0-9-_!?><>=./:]+)"
-            matches (re-seq pattern mock-source-content)]
-        (is (seq matches))
-        (is (= 2 (count matches))) ; Should find 2 leaf nodes with extractable functions
-
-        ;; Check specific matches
-        (let [match-map (into {} (map (fn [[_ node-name fn-name]] [(keyword node-name) fn-name]) matches))]
-          (is (= ">=" (get match-map :is-adult)))
-          (is (= "str" (get match-map :greeting))))))))
 
 (deftest embedded-node-labeling-test
   (testing "embedded node labeling in DOT format"
@@ -420,7 +390,7 @@
       (is (match? {:type :branch} (get nodes :nested-branch)))
 
       ;; Test embedded node extraction for visualization
-      (let [embedded-keys (filter #(viz/is-embedded-node? %) (keys nodes))]
+      (let [embedded-keys (filter #(graph/is-embedded-node? %) (keys nodes))]
         (is (>= (count embedded-keys) 0))))))
 
 (deftest edge-extraction-test
@@ -762,24 +732,14 @@
                                        (>value "full")
                                        (>value "restricted"))}]
 
-      (testing "default mode (auto-detection)"
+      (testing "standard analysis mode"
         (let [result (viz/analyze-nodely-env test-env)]
           (is (map? result))
           (is (contains? result :graph-structure))
           (is (contains? result :statistics))
           (is (contains? result :dot-format))
           (is (string? (:dot-format result)))
-          (is (str/starts-with? (:dot-format result) "digraph NodelyGraph"))))
-
-      (testing ":disabled mode (no function extraction)"
-        (let [result (viz/analyze-nodely-env test-env :disabled)]
-          (is (map? result))
-          (is (contains? result :graph-structure))
-          (is (contains? result :statistics))
-          (is (contains? result :dot-format))
-          (is (string? (:dot-format result)))
-          ;; Should not contain function names since extraction is disabled
-          (is (not (str/includes? (:dot-format result) "fn:"))))))))
+          (is (str/starts-with? (:dot-format result) "digraph NodelyGraph")))))))
 
 (deftest analyze-nodely-env-consistency-test
   (testing "consistency across different API modes"
@@ -787,44 +747,15 @@
                     :threshold (>value 18)
                     :is-adult (>leaf (>= ?user-age ?threshold))}
 
-          default-result (viz/analyze-nodely-env test-env)
-          disabled-result (viz/analyze-nodely-env test-env :disabled)]
+          result (viz/analyze-nodely-env test-env)]
 
-      ;; Graph structure should be identical across all modes
-      (is (= (:graph-structure default-result)
-             (:graph-structure disabled-result)))
+      ;; Basic validation of result structure
+      (is (contains? result :graph-structure))
+      (is (contains? result :statistics))
+      (is (contains? result :dot-format))
 
-      ;; Statistics should be identical across all modes
-      (is (= (:statistics default-result)
-             (:statistics disabled-result)))
-
-      ;; DOT format structure should be similar (though function names may differ)
-      (is (str/starts-with? (:dot-format default-result) "digraph NodelyGraph"))
-      (is (str/starts-with? (:dot-format disabled-result) "digraph NodelyGraph")))))
-
-(deftest auto-detect-source-file-test
-  (testing "auto-detect-source-file function"
-    ;; Test with nil environment
-    (is (nil? (viz/auto-detect-source-file nil)))
-
-    ;; Test with empty environment
-    (is (nil? (viz/auto-detect-source-file {})))
-
-    ;; Test with a test environment (should not find source since it's defined in test)
-    (let [test-env {:test-node (>value "test")}]
-      ;; This will likely return nil since test-env is not defined in a source file
-      ;; but the function should not throw an error
-      (is (or (nil? (viz/auto-detect-source-file test-env))
-              (string? (viz/auto-detect-source-file test-env)))))))
-
-(deftest function-name-extraction-test
-  (testing "function name extraction from source files"
-    ;; Test the leaf function name extraction with a mock source content
-    (let [mock-source ":test-node (>leaf (+ 1 2))
-                      :another-node (>leaf (str \"hello\" \"world\"))
-                      :complex-node (>leaf (>= x y))"]
-      ;; Test pattern matching (this tests the internal regex)
-      (is (seq (re-seq #":([a-zA-Z0-9-]+)\s*\(>leaf\s*\(([a-zA-Z0-9-_!?><>=./:]+)" mock-source))))))
+      ;; DOT format should be valid
+      (is (str/starts-with? (:dot-format result) "digraph NodelyGraph")))))
 
 (deftest dot-format-node-labeling-test
   (testing "DOT format node labeling with new format"
