@@ -302,3 +302,11 @@
     (for [engine (set/difference (set (keys api/engine-data))
                                  remove-keys)]
       (update-node-engine-test-suite engine))))
+
+(t/deftest try-env
+  (t/testing "try-env works"
+    (t/matching 3
+                (api/eval-key 
+                 (api/try-env exceptions-all-the-way-down
+                                       (catch Throwable _ 0)) 
+                 :d {::api/engine :sync.lazy}))))

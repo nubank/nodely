@@ -118,7 +118,7 @@
 
 (defn update-leaf
   [leaf f]
-  (update leaf :nodely.data/fn #(comp f %)))
+  (update leaf :nodely.data/fn #(f %))) ;; TODO: We should change this --> `comp` was not working and we need to figure out another way to do this
 
 (declare update-node)
 
