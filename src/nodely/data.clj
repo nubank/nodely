@@ -151,8 +151,8 @@
 
 (extend-protocol ComposableInvokable
   IFn
-  (compose-return [fn f] (CompletableFutureComposableInvokable. (list [:apply fn] [:apply f])))
-  (compose-throw [fn f] (CompletableFutureComposableInvokable. (list [:apply fn] [:throw f]))))
+  (compose-return [fn f] (CompletableFutureComposableInvokable. [[:apply fn] [:apply f]]))
+  (compose-throw [fn f] (CompletableFutureComposableInvokable. [[:apply fn] [:throw f]])))
 
 (defn update-leaf
   [leaf f]
