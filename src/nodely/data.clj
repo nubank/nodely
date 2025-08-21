@@ -4,6 +4,7 @@
    [clojure.set :as set]
    [schema.core :as s])
   (:import
+   [clojure.lang IFn]
    [java.util.concurrent CompletableFuture CompletionException]
    [java.util.function Function]))
 
@@ -119,19 +120,44 @@
      :sequence (recur (::process-node node)
                       (conj inputs (::input node))))))
 
+;; Completablefuture based exception and return composition, need to enable try-env next
+;; try-env needs
+;; unwrap exceptions (always CompletionException thrown from CF wrapping actual exception)
+;; determine if Exception type was specified to be caught (including inheritence, order of expression matters in try catch, can't use a map!)
+;; Run body with caught exception and yield result
+
 (defn- jfunctionify
   [^clojure.lang.IFn f]
-  (reify Function (apply [o] (.invoke f o))))
+  (reify Function (apply [_ o] (.invoke f o))))
+
+(defprotocol ComposableInvokable
+  (compose-return [ci f] "Returns a new ComposableInvokable that will invoke f on the return of cf, when it returns successfully.")
+  (compose-throw [ci f] "Returns a new ComposableInvokable that will invoke f on the exception thrown from ci, when it ends exceptionally."))
+
+(deftype CompletableFutureComposableInvokable [compositions]
+  ComposableInvokable
+  (compose-return [_ f] (CompletableFutureComposableInvokable. (conj compositions [:apply f])))
+  (compose-throw [_ f] (CompletableFutureComposableInvokable. (conj compositions [:throw f])))
+  IFn
+  (invoke [_ arg]
+    (loop [cf (CompletableFuture/completedFuture arg)
+           [[op func] & rem] compositions]
+      (if (nil? func)
+        @cf
+        (recur (case op
+                 :apply (.thenApply cf (jfunctionify func))
+                 :throw (.exceptionally cf (jfunctionify func)))
+               rem)))))
+
+(extend-protocol ComposableInvokable
+  IFn
+  (compose-return [fn f] (CompletableFutureComposableInvokable. (list [:apply fn] [:apply f])))
+  (compose-throw [fn f] (CompletableFutureComposableInvokable. (list [:apply fn] [:throw f]))))
 
 (defn update-leaf
   [leaf f]
   ;; f new function, arg is old function
-  (update leaf :nodely.data/fn (fn [oldf]
-                                 (fn [arg]
-                                   (-> (CompleteableFuture/completedFuture arg)
-                                       (.thenApply (jfunctionify oldf))
-                                       (.thenApply (jfunctionify f))
-                                       deref)))))
+  (update leaf :nodely.data/fn compose-return f))
 
 (declare update-node)
 
