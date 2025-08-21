@@ -2,7 +2,10 @@
   (:refer-clojure :exclude [map sequence flatten])
   (:require
    [clojure.set :as set]
-   [schema.core :as s]))
+   [schema.core :as s])
+  (:import
+   [java.util.concurrent CompletableFuture CompletionException]
+   [java.util.function Function]))
 
 ;;
 ;; Node Definitions
@@ -116,9 +119,19 @@
      :sequence (recur (::process-node node)
                       (conj inputs (::input node))))))
 
+(defn- jfunctionify
+  [^clojure.lang.IFn f]
+  (reify Function (apply [o] (.invoke f o))))
+
 (defn update-leaf
   [leaf f]
-  (update leaf :nodely.data/fn #(f %))) ;; TODO: We should change this --> `comp` was not working and we need to figure out another way to do this
+  ;; f new function, arg is old function
+  (update leaf :nodely.data/fn (fn [oldf]
+                                 (fn [arg]
+                                   (-> (CompleteableFuture/completedFuture arg)
+                                       (.thenApply (jfunctionify oldf))
+                                       (.thenApply (jfunctionify f))
+                                       deref)))))
 
 (declare update-node)
 
@@ -155,6 +168,11 @@
 (defn with-error-handler
   [env handler]
   (update-vals env #(update-node % handler {:apply-to-condition? true})))
+
+(defmacro try-env
+  [env & body]
+  `(try ~env
+        ~@body))
 
 (s/defn get-value :- s/Any
   [env :- Env
