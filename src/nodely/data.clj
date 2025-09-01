@@ -105,7 +105,61 @@
   [node]
   (= :leaf (::type node)))
 
+(defn branch?
+  "Check if a node is a branch node."
+  [node]
+  (= :branch (::type node)))
+
+(defn sequence?
+  "Check if a node is a sequence node."
+  [node]
+  (= :sequence (::type node)))
+
+(defn else-condition?
+  "Check if a condition represents an :else clause."
+  [condition]
+  (and condition
+       (value? condition)
+       (= (::value condition) :else)))
+
+(defn node-type
+  "Get the type of a node."
+  [node]
+  (::type node))
+
+(defn node-value
+  "Get the value from a value node."
+  [node]
+  (when (value? node)
+    (::value node)))
+
+(defn branch-condition
+  "Get the condition from a branch node."
+  [node]
+  (when (branch? node)
+    (::condition node)))
+
+(defn branch-truthy
+  "Get the truthy branch from a branch node."
+  [node]
+  (when (branch? node)
+    (::truthy node)))
+
+(defn branch-falsey
+  "Get the falsey branch from a branch node."
+  [node]
+  (when (branch? node)
+    (::falsey node)))
+
+(defn sequence-input
+  "Get the input from a sequence node."
+  [node]
+  (when (sequence? node)
+    (::input node)))
+
 (defn node-inputs
+  "Get the inputs from a node for execution dependency resolution.
+   For branches, only follows the condition path (execution dependencies)."
   ([node]
    (node-inputs node #{}))
   ([node inputs]
@@ -113,6 +167,26 @@
      :value    inputs
      :leaf     (set/union inputs (::inputs node))
      :branch   (recur (::condition node) inputs)
+     :sequence (recur (::process-node node)
+                      (conj inputs (::input node))))))
+
+(defn node-all-inputs
+  "Get ALL possible inputs from a node for static analysis.
+   Unlike node-inputs, for branches this collects from condition, truthy, AND falsey paths.
+   This is useful for graph analysis where you need to know all possible dependencies."
+  ([node]
+   (node-all-inputs node #{}))
+  ([node inputs]
+   (case (::type node)
+     :value    inputs
+     :leaf     (set/union inputs (::inputs node))
+     :branch   (let [condition (::condition node)
+                     truthy (::truthy node)
+                     falsey (::falsey node)]
+                 (set/union
+                  (if condition (node-all-inputs condition #{}) #{})
+                  (if truthy (node-all-inputs truthy #{}) #{})
+                  (if falsey (node-all-inputs falsey #{}) #{})))
      :sequence (recur (::process-node node)
                       (conj inputs (::input node))))))
 
