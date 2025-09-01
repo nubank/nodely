@@ -333,7 +333,7 @@
                 falsey-inputs (if-let [falsey (data/branch-falsey node)] (data/node-inputs falsey) #{})
 
                 ;; Also check nested dependencies in truthy branch
-                all-truthy-deps (if truthy-node (graph/extract-dependencies-from-node truthy-node) #{})]
+                all-truthy-deps (if truthy-node (data/node-all-inputs truthy-node) #{})]
             (cond
               ;; Check if dependency is in the current condition
               (contains? condition-inputs from)
@@ -362,12 +362,7 @@
 (defn html-escape
   "HTML escape function for function names in labels."
   [s]
-  (when s
-    (-> s
-        (str/replace "&" "&amp;")
-        (str/replace "<" "&lt;")
-        (str/replace ">" "&gt;")
-        (str/replace "\"" "&quot;"))))
+  (when s (str/escape s {\& "&amp;" \< "&lt;" \> "&gt;" \" "&quot;"})))
 
 (defn create-value-preview
   "Create a preview string for values, truncated to configured length."

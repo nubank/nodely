@@ -104,7 +104,9 @@
                    :type node-type
                    :dependencies (data/node-all-inputs node-def)}]
     (case node-type
-      :value (assoc base-info :value (data/node-value node-def))
+      :value (-> base-info
+                 (dissoc :dependencies)
+                 (assoc :value (data/node-value node-def)))
       :leaf (assoc base-info
                    :fn-present (boolean (::data/fn node-def))
                    :inputs (data/node-inputs node-def))

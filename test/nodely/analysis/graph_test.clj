@@ -100,20 +100,20 @@
 (deftest dependency-extraction-test
   (testing "dependency extraction from different node types"
     ;; Value node - no dependencies
-    (is (= #{} (graph/extract-dependencies-from-node (>value 42))))
+    (is (= #{} (data/node-all-inputs (>value 42))))
 
     ;; Leaf node - has inputs
-    (is (= #{:a :b} (graph/extract-dependencies-from-node (>leaf (+ ?a ?b)))))
+    (is (= #{:a :b} (data/node-all-inputs (>leaf (+ ?a ?b)))))
 
     ;; Sequence node - has input
-    (is (= #{:data} (graph/extract-dependencies-from-node (>sequence (identity ?data) :data))))
+    (is (= #{:data} (data/node-all-inputs (>sequence (identity ?data) :data))))
 
     ;; Branch node - collects from all parts
     (let [condition (>leaf (inc ?x))
           truthy (>leaf (dec ?y))
           falsey (>leaf (* 2 ?z))
           branch-node (>if condition truthy falsey)]
-      (is (= #{:x :y :z} (graph/extract-dependencies-from-node branch-node))))))
+      (is (= #{:x :y :z} (data/node-all-inputs branch-node))))))
 
 (deftest node-info-extraction-test
   (testing "node info extraction"
@@ -122,9 +122,9 @@
           info (graph/extract-node-info :test-value value-node)]
       (is (match? {:id :test-value
                    :type :value
-                   :value 42
-                   :dependencies #{}}
-                  info)))
+                   :value 42}
+                  info))
+      (is (nil? (:dependencies info))))
 
     ;; Leaf node
     (let [leaf-node (>leaf (+ ?a ?b))
