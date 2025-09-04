@@ -120,72 +120,59 @@
      :sequence (recur (::process-node node)
                       (conj inputs (::input node))))))
 
-;; Completablefuture based exception and return composition, need to enable try-env next
-;; try-env needs
-;; unwrap exceptions (always CompletionException thrown from CF wrapping actual exception)
-;; determine if Exception type was specified to be caught (including inheritence, order of expression matters in try catch, can't use a map!)
-;; Run body with caught exception and yield result
-
-(defn- jfunctionify
-  [^clojure.lang.IFn f]
-  (reify Function (apply [_ o] (.invoke f o))))
-
-(defprotocol ComposableInvokable
-  (compose-return [ci f] "Returns a new ComposableInvokable that will invoke f on the return of cf, when it returns successfully.")
-  (compose-throw [ci f] "Returns a new ComposableInvokable that will invoke f on the exception thrown from ci, when it ends exceptionally."))
-
-(deftype CompletableFutureComposableInvokable [compositions]
-  ComposableInvokable
-  (compose-return [_ f] (CompletableFutureComposableInvokable. (conj compositions [:apply f])))
-  (compose-throw [_ f] (CompletableFutureComposableInvokable. (conj compositions [:throw f])))
-  IFn
-  (invoke [_ arg]
-    (loop [cf (CompletableFuture/completedFuture arg)
-           [[op func] & rem] compositions]
-      (if (nil? func)
-        @cf
-        (recur (case op
-                 :apply (.thenApply cf (jfunctionify func))
-                 :throw (.exceptionally cf (jfunctionify func)))
-               rem)))))
-
-(extend-protocol ComposableInvokable
-  IFn
-  (compose-return [fn f] (CompletableFutureComposableInvokable. [[:apply fn] [:apply f]]))
-  (compose-throw [fn f] (CompletableFutureComposableInvokable. [[:apply fn] [:throw f]])))
+(defn catching
+  "Like `clojure.core/comp`, except only affects throw completions of
+  the wrapped `g`. `f` must be a function of a single Exception, and
+  will be passed the exception thrown from `g` if `g` completes
+  exceptionally."
+  [f g]
+  (fn [& args]
+    (try (apply g args)
+         (catch Throwable t (f t)))))
 
 (defn update-leaf
-  [leaf f]
+  [leaf f compositor]
   ;; f new function, arg is old function
-  (update leaf :nodely.data/fn compose-return f))
+  (update leaf :nodely.data/fn #(compositor f %)))
 
-(declare update-node)
+(declare env-update-helper)
 
 (defn update-branch
   [{::keys [condition truthy falsey]}
    f
    {:keys [apply-to-condition?]
-    :or   {apply-to-condition? false}}]
+    :or   {apply-to-condition? false} :as opts}
+   compositor]
   #::{:type      :branch
       :condition (if apply-to-condition?
-                   (update-node condition f)
+                   (env-update-helper condition f opts compositor)
                    condition)
-      :falsey    (update-node falsey f)
-      :truthy    (update-node truthy f)})
+      :falsey    (env-update-helper falsey f opts compositor)
+      :truthy    (env-update-helper truthy f opts compositor)})
 
 (defn update-sequence
-  [sequence f]
-  (update sequence ::process-node update-node f))
+  [sequence f compositor]
+  (update sequence ::process-node env-update-helper f {} compositor))
+
+(defn env-update-helper
+  [node f opts compositor]
+  (case (::type node)
+    :value    (update node ::value f)
+    :leaf     (update-leaf node f compositor)
+    :branch   (update-branch node f opts compositor)
+    :sequence (update-sequence node f compositor)))
 
 (defn update-node
   ([node f opts]
-   (case (::type node)
-     :value    (update node ::value f)
-     :leaf     (update-leaf node f)
-     :branch   (update-branch node f opts)
-     :sequence (update-sequence node f)))
+   (env-update-helper node f opts comp))
   ([node f]
    (update-node node f {})))
+
+(defn catch-node
+  ([node f opts]
+   (env-update-helper node f opts catching))
+  ([node f]
+   (catch-node node f {})))
 
 ;;
 ;; Env Utils
