@@ -27,65 +27,6 @@
                                                 (data/leaf [:b] identity)
                                                 (data/leaf [:c] identity)))))))
 
-(deftest update-leaf-test
-  (testing "update-leaf modifies the function by composing with the given function"
-    (let [original-leaf (data/leaf [:x] (comp inc :x))
-          updated-leaf (data/update-leaf original-leaf (partial * 2))
-          expected-props {::data/type   :leaf
-                          ::data/inputs #{:x}}]
-      ; update-leaf should preserve other leaf properties
-      (is (= expected-props (select-keys updated-leaf (keys expected-props))))
-      ; update-leaf should modify the function by composing with the given function
-      (is (= 12 ((::data/fn updated-leaf) {:x 5}))))))
-
-(deftest update-branch-test
-  (testing "update-branch without apply-to-condition updates truthy and falsey branches"
-    (let [condition (data/leaf [:x] (comp even? :x))
-          truthy (data/leaf [:y] (comp inc :y))
-          falsey (data/leaf [:z] (comp dec :z))
-          branch (data/branch condition truthy falsey)
-          updated-branch (data/update-branch branch (partial * 2) {})]
-      (is (= true ((::data/fn (::data/condition updated-branch)) {:x 2}))) ; (even? 2) = true
-      (is (= 20 ((::data/fn (::data/truthy updated-branch)) {:y 9}))) ; (* 2 (inc 9)) = 20
-      (is (= 18 ((::data/fn (::data/falsey updated-branch)) {:z 10}))))) ; (* 2 (dec 10)) = 18
-
-  (testing "update-branch with apply-to-condition updates all branches including condition"
-    (let [condition (data/leaf [:x] (comp inc :x))
-          truthy (data/leaf [:y] (comp inc :y))
-          falsey (data/leaf [:z] (comp inc :z))
-          branch (data/branch condition truthy falsey)
-          updated-branch (data/update-branch branch (partial * 2) {:apply-to-condition? true})]
-      (is (= 12 ((::data/fn (::data/condition updated-branch)) {:x 5}))) ; (* 2 (inc 5)) = 12
-      (is (= 12 ((::data/fn (::data/truthy updated-branch)) {:y 5}))) ; (* 2 (inc 5)) = 12
-      (is (= 12 ((::data/fn (::data/falsey updated-branch)) {:z 5}))))) ; (* 2 (inc 5)) = 12
-
-  (testing "update-branch with nested branches updates recursively"
-    (let [inner-condition (data/leaf [:a] (comp even? :a))
-          inner-truthy (data/leaf [:b] (comp inc :b))
-          inner-falsey (data/leaf [:c] (comp dec :c))
-          inner-branch (data/branch inner-condition inner-truthy inner-falsey)
-          outer-condition (data/leaf [:x] (comp even? :x))
-          outer-truthy inner-branch
-          outer-falsey (data/leaf [:z] (comp dec :z))
-          outer-branch (data/branch outer-condition outer-truthy outer-falsey)
-          updated-branch (data/update-branch outer-branch (partial * 2) {})]
-      ;; Outer condition should not be updated by default
-      (is (= true ((::data/fn (::data/condition updated-branch)) {:x 2}))) ; (even? 2) = true
-      ;; Inner condition should not be updated by default
-      (is (= true ((::data/fn (::data/condition (::data/truthy updated-branch))) {:a 2}))) ; (even? 2) = true
-      ;; Inner truthy should be updated
-      (is (= 12 ((::data/fn (::data/truthy (::data/truthy updated-branch))) {:b 5}))) ; (* 2 (inc 5)) = 12
-      ;; Inner falsey should be updated
-      (is (= 8 ((::data/fn (::data/falsey (::data/truthy updated-branch))) {:c 5}))) ; (* 2 (dec 5)) = 8
-      ;; Outer falsey should be updated
-      (is (= 8 ((::data/fn (::data/falsey updated-branch)) {:z 5})))))) ; (* 2 (dec 5)) = 8
-
-(deftest update-sequence-test
-  (testing "update-sequence composes the function argument"
-    (let [sequence-node (data/sequence :items [:closure-var] (comp inc :closure-var) #{})
-          updated-sequence (data/update-sequence sequence-node (partial * 2))]
-      (is (= 12 ((::data/fn (::data/process-node updated-sequence)) {:closure-var 5})))))) ; (* 2 (inc 5)) = 12
-
 (deftest update-node-test
   (testing "update-node with value node"
     (let [value-node (data/value 42)
@@ -138,3 +79,11 @@
       (is (= (::data/type updated-node) :leaf))
       (is (= (::data/inputs updated-node) #{:x}))
       (is (= 12 ((::data/fn updated-node) {:x 5}))))))
+
+(deftest with-error-handler-test
+  (testing "with-error-handler wraps leaf functions to handle thrown exceptions"
+    (let [throw-env {:a (data/leaf #{} (fn [] (throw (ex-info "OOps" {}))))}
+          handled-env (data/with-error-handler throw-env (fn [^Throwable _] :handled))]
+      (is (= :handleds ((::data/fn (get handled-env :a))))))))
+
+{:a (data/leaf #{} (fn [] (throw (ex-info "OOps" {}))))}

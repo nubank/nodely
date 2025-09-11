@@ -180,9 +180,25 @@
 
 (defn with-error-handler
   [env handler]
-  (update-vals env #(update-node % handler {:apply-to-condition? true})))
+  (update-vals env #(catch-node % handler {:apply-to-condition? true})))
 
-(defmacro try-env
+(defn with-try-clause-expr
+  [[_ t s expr]]
+  (fn [error]
+  (when (instance? error type)
+    expr)))
+
+;; '(with-try env (catch type symbol expr))
+;;  (update-vals env (fn [error] (if (instance? error type)
+;;                                   ()
+;;  ))
+(defn with-try-expr
+  [env & clauses]
+  (let [clauses (for [[catch t s expr] clauses]
+                  (do (assert (= catch 'catch))
+                      [t s expr]))]))
+
+(defmacro with-try
   [env & body]
   `(try ~env
         ~@body))
