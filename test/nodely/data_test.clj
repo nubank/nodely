@@ -1,8 +1,7 @@
 (ns nodely.data-test
   (:refer-clojure :exclude [cond])
-  (:require
-   [clojure.test :refer :all]
-   [nodely.data :as data]))
+  (:require [clojure.test :refer :all]
+            [nodely.data :as data]))
 
 (deftest node?
   (testing "an actual node"
@@ -84,6 +83,6 @@
   (testing "with-error-handler wraps leaf functions to handle thrown exceptions"
     (let [throw-env {:a (data/leaf #{} (fn [] (throw (ex-info "OOps" {}))))}
           handled-env (data/with-error-handler throw-env (fn [^Throwable _] :handled))]
-      (is (= :handleds ((::data/fn (get handled-env :a))))))))
+      (is (= :handled ((::data/fn (get handled-env :a))))))))
 
 {:a (data/leaf #{} (fn [] (throw (ex-info "OOps" {}))))}
