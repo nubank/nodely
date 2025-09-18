@@ -182,26 +182,42 @@
   [env handler]
   (update-vals env #(catch-node % handler {:apply-to-condition? true})))
 
-(defn with-try-clause-expr
-  [[_ t s expr]]
-  (fn [error]
-  (when (instance? error type)
-    expr)))
+#_(defn with-try-clause-expr
+    [[_ t s expr]]
+    (fn [error]
+      (when (instance? error type)
+        expr)))
 
 ;; '(with-try env (catch type symbol expr))
 ;;  (update-vals env (fn [error] (if (instance? error type)
 ;;                                   ()
 ;;  ))
+#_(defn with-try-expr
+    [env & clauses]
+    (let [clauses (for [[catch t s expr] clauses]
+                    (do (assert (= catch 'catch))
+                        [t s expr]))]))
+
 (defn with-try-expr
-  [env & clauses]
-  (let [clauses (for [[catch t s expr] clauses]
-                  (do (assert (= catch 'catch))
-                      [t s expr]))]))
+  [clauses]
+  (let [clauses (into {} (for [[c t s expr] clauses]
+                           (do (assert (= c 'catch))
+                               [(resolve t) (eval `(fn [~s] ~expr))]
+                               #_[t s expr])))]
+    clauses))
 
 (defmacro with-try
   [env & body]
-  `(try ~env
-        ~@body))
+  `(with-error-handler
+     ~env
+     ~(with-try-expr body)))
+
+(comment
+  (macroexpand-1 '(with-try {:a "hi"}
+                    (catch Exception e (println e))
+                    (catch Throwable t (println t))))
+  ;
+  )
 
 (s/defn get-value :- s/Any
   [env :- Env
