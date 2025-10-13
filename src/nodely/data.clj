@@ -198,24 +198,36 @@
                     (do (assert (= catch 'catch))
                         [t s expr]))]))
 
+(defn tuple-to-handler
+  [m]
+  (fn [error]
+    (if-let [f (some (fn [[ex-class handler]] (when (instance? ex-class error) handler)) m)]
+      (f error)
+      (throw error))))
+
 (defn with-try-expr
   [clauses]
-  (let [clauses (into {} (for [[c t s expr] clauses]
+  (let [clauses (into [] (for [[c t s expr] clauses]
                            (do (assert (= c 'catch))
-                               [(resolve t) (eval `(fn [~s] ~expr))]
-                               #_[t s expr])))]
+                               (if-let [t (resolve t)]
+                                 [t (eval `(fn [~s] ~expr))]
+                                 (throw (ex-info (str "Could not resolve exception class: " t) {:type t}))))))]
     clauses))
 
 (defmacro with-try
   [env & body]
   `(with-error-handler
      ~env
-     ~(with-try-expr body)))
+     (tuple-to-handler ~(with-try-expr body))))
 
 (comment
-  (macroexpand-1 '(with-try {:a "hi"}
+  (macroexpand-1 '(with-try {:a (leaf [:x] (comp inc :x))}
                     (catch Exception e (println e))
                     (catch Throwable t (println t))))
+
+  (tuple-to-handler {java.lang.Exception identity,
+                     java.lang.Throwable identity})
+
   ;
   )
 

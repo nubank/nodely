@@ -303,10 +303,27 @@
                                  remove-keys)]
       (update-node-engine-test-suite engine))))
 
-(t/deftest try-env
-  (t/testing "try-env works"
-    (t/matching 3
-                (api/eval-key 
-                 (api/try-env exceptions-all-the-way-down
-                                       (catch Throwable _ 0)) 
+(t/deftest with-try
+  (t/testing "with-try works Throwable catches first"
+    (t/matching "Could not resolve exception class: NonSenseException"
+                (try
+                  (eval '(api/with-try exceptions-all-the-way-down
+                           (catch NonSenseException _ 0)))
+                  (catch clojure.lang.Compiler$CompilerException e
+                    (ex-message (.getCause e))))))
+
+  (t/testing "with-try works Throwable catches first"
+    (t/matching 0
+                (api/eval-key
+                 (api/with-try exceptions-all-the-way-down
+                   (catch Throwable _ -3)
+                   (catch clojure.lang.ExceptionInfo _ 0))
+                 :d {::api/engine :sync.lazy})))
+
+  (t/testing "with-try works ExceptionInfo catches first"
+    (t/matching 0
+                (api/eval-key
+                 (api/with-try exceptions-all-the-way-down
+                   (catch clojure.lang.ExceptionInfo _ -3)
+                   (catch Throwable _ 0))
                  :d {::api/engine :sync.lazy}))))
