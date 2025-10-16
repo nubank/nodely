@@ -1,7 +1,8 @@
 (ns nodely.data-test
   (:refer-clojure :exclude [cond])
-  (:require [clojure.test :refer :all]
-            [nodely.data :as data]))
+  (:require
+   [clojure.test :refer :all]
+   [nodely.data :as data]))
 
 (deftest node?
   (testing "an actual node"

@@ -30,7 +30,7 @@
 
 (defmacro try-env
   [env & body]
-  `(update-vals ~env #(update-node % (fn[f#] (fn [& args#] (try (apply f# args#) ~@body))) {:apply-to-condition? true}))
+  `(update-vals ~env #(update-node % (fn [f#] (fn [& args#] (try (apply f# args#) ~@body))) {:apply-to-condition? true}))
   ;; `(try ~env
   ;;       ~@body)
   )

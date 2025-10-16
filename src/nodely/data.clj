@@ -2,11 +2,7 @@
   (:refer-clojure :exclude [map sequence flatten])
   (:require
    [clojure.set :as set]
-   [schema.core :as s])
-  (:import
-   [clojure.lang IFn]
-   [java.util.concurrent CompletableFuture CompletionException]
-   [java.util.function Function]))
+   [schema.core :as s]))
 
 ;;
 ;; Node Definitions
