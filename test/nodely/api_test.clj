@@ -307,7 +307,7 @@
   (t/testing "with-try works Throwable catches first"
     (t/matching "Could not resolve exception class: NonSenseException"
                 (try
-                  (eval '(api/with-try exceptions-all-the-way-down
+                  (eval '(nodely.api.v0/with-try exceptions-all-the-way-down
                            (catch NonSenseException _ 0)))
                   (catch clojure.lang.Compiler$CompilerException e
                     (ex-message (.getCause e))))))
