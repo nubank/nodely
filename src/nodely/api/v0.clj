@@ -26,14 +26,6 @@
 (import-fn nodely.engine.lazy/eval-node-with-values eval-node-with-values)
 (import-fn nodely.data/merge-values merge-values)
 (import-fn nodely.data/get-value get-value)
-(import-fn nodely.data/update-node update-node)
-
-(defmacro try-env
-  [env & body]
-  `(update-vals ~env #(update-node % (fn [f#] (fn [& args#] (try (apply f# args#) ~@body))) {:apply-to-condition? true}))
-  ;; `(try ~env
-  ;;       ~@body)
-  )
 
 (def virtual-future-failure
   (delay

@@ -85,5 +85,3 @@
     (let [throw-env {:a (data/leaf #{} (fn [] (throw (ex-info "OOps" {}))))}
           handled-env (data/with-error-handler throw-env (fn [^Throwable _] :handled))]
       (is (= :handled ((::data/fn (get handled-env :a))))))))
-
-{:a (data/leaf #{} (fn [] (throw (ex-info "OOps" {}))))}

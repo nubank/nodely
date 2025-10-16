@@ -247,53 +247,34 @@
                   (try (api/eval-node-channel env (>leaf (inc ?z)) {::api/engine :core.async.doesnt-exist})
                        (catch clojure.lang.ExceptionInfo e (ex-data e)))))))
 
-(defn update-node-engine-test-suite
+(defn with-try-engine-test-suite
   [engine-key]
   (t/testing (name engine-key)
-    (t/testing "update-node functionality"
-      (t/testing "update-node and then eval a key that is affected by the update-node"
-        (let [original-env {:x (>value 2)
-                            :y (>value 3)
-                            :z (>leaf (+ ?x ?y))}
-              updated-env (update original-env :z api/update-node (partial * 2))]
-          (t/matching 10 (api/eval-key updated-env :z {::api/engine engine-key}))))
+    (t/testing "Exception types must be resolvable at with-try expansion time"
+      (t/matching "Could not resolve exception class: NonSenseException"
+                  (try
+                    (eval '(nodely.api.v0/with-try exceptions-all-the-way-down
+                             (catch NonSenseException _ 0)))
+                    (catch clojure.lang.Compiler$CompilerException e
+                      (ex-message (.getCause e))))))
 
-      (t/testing "update-node and then eval a key that is not affected by the update-node"
-        (let [original-env {:x (>value 2)
-                            :y (>value 3)
-                            :z (>leaf (+ ?x ?y))}
-              updated-env (update original-env :z api/update-node (partial * 2))]
-          (t/matching 2 (api/eval-key updated-env :x {::api/engine engine-key}))
-          (t/matching 3 (api/eval-key updated-env :y {::api/engine engine-key}))))
+    (t/testing "with-try catches exceptions informed by class inheritance and catch clause ordering"
+      (t/matching 0
+                  (api/eval-key
+                   (api/with-try exceptions-all-the-way-down
+                     (catch Throwable _ -3)
+                     (catch clojure.lang.ExceptionInfo _ 0))
+                   :d {::api/engine engine-key})))
 
-      (t/testing "update-node with value node"
-        (let [original-env {:x (>value 5)
-                            :y (>leaf (* ?x 2))}
-              updated-env (update original-env :x api/update-node (partial + 3))]
-          (t/matching 8 (api/eval-key updated-env :x {::api/engine engine-key}))
-          (t/matching 16 (api/eval-key updated-env :y {::api/engine engine-key}))))
+    (t/testing "with-try order of clauses can preempt inheritance"
+      (t/matching 0
+                  (api/eval-key
+                   (api/with-try exceptions-all-the-way-down
+                     (catch clojure.lang.ExceptionInfo _ -3)
+                     (catch Throwable _ 0))
+                   :d {::api/engine engine-key})))))
 
-      (t/testing "update-node with sequence node"
-        (let [original-env {:x (>value [1 2 3])
-                            :y (>sequence inc ?x)}
-              updated-env (update original-env :y api/update-node (fn [f] (comp (partial * 2) f)))]
-          (t/matching [4 6 8] (api/eval-key updated-env :y {::api/engine engine-key}))))
-
-      (t/testing "update-node with branch node"
-        (let [original-env {:x (>value 5)
-                            :y (>if (>leaf (even? ?x)) (>value "even") (>value "odd"))}
-              updated-env (update original-env :y api/update-node (partial str "result: "))]
-          (t/matching "result: odd" (api/eval-key updated-env :y {::api/engine engine-key}))))
-
-      (t/testing "update-node with apply-to-condition option"
-        (let [original-env {:x (>value 0)
-                            :y (>if (>leaf ?x) (>value -10) (>value 20))}
-              updated-env (update original-env :y api/update-node pos? {:apply-to-condition? true})]
-          ;; original: ?x = 0 is truthy, so truthy branch => -10
-          ;; after update: (pos? ?x) => (pos? 0) => false, so takes falsey branch => (pos? 20) => true
-          (t/matching true (api/eval-key updated-env :y {::api/engine engine-key})))))))
-
-(t/deftest update-node-test
+(t/deftest with-try
   (let [remove-keys (conj #{:core-async.iterative-scheduling
                             :async.virtual-futures}
                           (when  (try (import java.util.concurrent.ThreadPerTaskExecutor)
@@ -301,29 +282,4 @@
                             :applicative.virtual-future))]
     (for [engine (set/difference (set (keys api/engine-data))
                                  remove-keys)]
-      (update-node-engine-test-suite engine))))
-
-(t/deftest with-try
-  (t/testing "with-try works Throwable catches first"
-    (t/matching "Could not resolve exception class: NonSenseException"
-                (try
-                  (eval '(nodely.api.v0/with-try exceptions-all-the-way-down
-                           (catch NonSenseException _ 0)))
-                  (catch clojure.lang.Compiler$CompilerException e
-                    (ex-message (.getCause e))))))
-
-  (t/testing "with-try works Throwable catches first"
-    (t/matching 0
-                (api/eval-key
-                 (api/with-try exceptions-all-the-way-down
-                   (catch Throwable _ -3)
-                   (catch clojure.lang.ExceptionInfo _ 0))
-                 :d {::api/engine :sync.lazy})))
-
-  (t/testing "with-try works ExceptionInfo catches first"
-    (t/matching 0
-                (api/eval-key
-                 (api/with-try exceptions-all-the-way-down
-                   (catch clojure.lang.ExceptionInfo _ -3)
-                   (catch Throwable _ 0))
-                 :d {::api/engine :sync.lazy}))))
+      (with-try-engine-test-suite engine))))

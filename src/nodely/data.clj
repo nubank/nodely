@@ -178,22 +178,6 @@
   [env handler]
   (update-vals env #(catch-node % handler {:apply-to-condition? true})))
 
-#_(defn with-try-clause-expr
-    [[_ t s expr]]
-    (fn [error]
-      (when (instance? error type)
-        expr)))
-
-;; '(with-try env (catch type symbol expr))
-;;  (update-vals env (fn [error] (if (instance? error type)
-;;                                   ()
-;;  ))
-#_(defn with-try-expr
-    [env & clauses]
-    (let [clauses (for [[catch t s expr] clauses]
-                    (do (assert (= catch 'catch))
-                        [t s expr]))]))
-
 (defn tuple-to-handler
   [m]
   (fn [error]
@@ -215,17 +199,6 @@
   `(with-error-handler
      ~env
      (tuple-to-handler ~(with-try-expr body))))
-
-(comment
-  (macroexpand-1 '(with-try {:a (leaf [:x] (comp inc :x))}
-                    (catch Exception e (println e))
-                    (catch Throwable t (println t))))
-
-  (tuple-to-handler {java.lang.Exception identity,
-                     java.lang.Throwable identity})
-
-  ;
-  )
 
 (s/defn get-value :- s/Any
   [env :- Env
