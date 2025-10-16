@@ -6,7 +6,7 @@
    [clojure.test :refer :all]
    [criterium.core :as criterium]
    [matcher-combinators.matchers :as matchers]
-   [nodely.api.v0 :as api :refer [>if >leaf >sequence >value blocking]]
+   [nodely.api.v0 :as api :refer [>leaf >sequence >value blocking]]
    [nodely.test-helpers :as t]))
 
 (def env {:x (>value 2)
