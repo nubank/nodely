@@ -224,7 +224,7 @@
   [env & body]
   `(with-error-handler
      ~env
-     (tuple-to-handler ~(with-try-expr body))))
+     (#'tuple-to-handler ~(with-try-expr body))))
 
 (s/defn get-value :- s/Any
   [env :- Env
