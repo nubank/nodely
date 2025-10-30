@@ -178,14 +178,14 @@
   [env handler]
   (update-vals env #(catch-node % handler {:apply-to-condition? true})))
 
-(defn tuple-to-handler
+(defn- tuple-to-handler
   [m]
   (fn [error]
     (if-let [f (some (fn [[ex-class handler]] (when (instance? ex-class error) handler)) m)]
       (f error)
       (throw error))))
 
-(defn with-try-expr
+(defn- with-try-expr
   [clauses]
   (let [clauses (into [] (for [[c t s expr] clauses]
                            (do (assert (= c 'catch))
@@ -195,6 +195,31 @@
     clauses))
 
 (defmacro with-try
+  "Macro
+
+  `with-try` will apply an error handling semantic to every leaf,
+  branch, and sequence node in a provided environment. If any such
+  nodes throw an exception, the catch expressions described in the
+  body of `with-try` will be evaluated. The resulting value of the
+  matching catch clause will become the value of the node which threw
+  the exception.
+
+  `with-try` has syntax equivalent to Clojure's `try` special form for
+  `catch` clauses but does not currently support use of a `finally`
+  clause.
+
+  `with-try` creates a policy across an entire environment
+  indiscriminately, when it is possible, clients are advised to catch
+  exceptional cases in the implementations of leaf/branch/sequence
+  nodes explicitly.
+
+  example:
+
+  (with-try {:a (>leaf (/ 5 ?b))
+             :b (>value 0)}
+    (catch ArithmeticException _ 0))
+
+  will result in `:a` evaluating to 0"
   [env & body]
   `(with-error-handler
      ~env
