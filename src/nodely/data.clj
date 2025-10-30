@@ -217,7 +217,8 @@
 
   (with-try {:a (>leaf (/ 5 ?b))
              :b (>value 0)}
-    (catch ArithmeticException _ 0))
+    (catch ArithmeticException _ Double/NaN)
+    (catch NullPointerException _ 0))
 
   will result in `:a` evaluating to 0"
   [env & body]

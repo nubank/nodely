@@ -179,6 +179,30 @@ Let's say that `x` and `y` are actually expensive http requests. What we want is
 
 This will evaluate the node by realizing all required dependencies, without executing the dependencies that are not needed. For instance, if x is even, y is not evaluated at all.
 
+#### Environment Defined Exception Handling
+
+Nodely offers the `with-try` macro to provide an environment-level
+policy for exception handling. This tool is essentially coarse grained
+and will apply an exception handler to every leaf, branch, and
+sequence node in the environment provided to it. The syntax mirrors
+that of Clojure's `(try ... (catch ...))` special forms, e.g.
+
+```clojure
+  (with-try {:a (>leaf (/ 5 ?b))
+             :b (>value 0)}
+    (catch ArithmeticException _ Double/NaN)
+    (catch NullPointerException _ 0))
+```
+
+Multiple catch clauses may be specified to perform type based
+dispatching of which expression an exceptional case should
+trigger.
+
+This is offered as a tool for setting exceptional policy independently
+of specifying environments; Nodely clients are advised to prefer
+handling exceptional cases explicitly in the implementations of leaf,
+branch and sequence functions when possible.
+
 #### Testing
 
 Using `eval-node-with-values` is the most straightforward way to evaluate a node by supplying actual values for the data dependencies. If we want to test `branch-node` without actually making the expensive calls, it is as simple as that:
