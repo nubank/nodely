@@ -1,4 +1,4 @@
-(defproject dev.nu/nodely "2.0.2"
+(defproject dev.nu/nodely "2.0.3"
   :description "Decoupling data fetching from data dependency declaration"
   :url "https://github.com/nubank/nodely"
   :license {:name "MIT"}
@@ -6,7 +6,7 @@
   :plugins [[s3-wagon-private "1.3.4" :exclusions [com.fasterxml.jackson.core/jackson-core]]
             [com.fasterxml.jackson.core/jackson-core "2.12.4"]]
 
-  :dependencies [[org.clojure/clojure "1.10.3"]
+  :dependencies [[org.clojure/clojure "1.12.0"]
                  [aysylu/loom "1.0.2"]
                  [org.clojure/core.async "1.5.648" :scope "provided"]
                  [funcool/promesa "10.0.594" :scope "provided"]

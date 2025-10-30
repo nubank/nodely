@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.0.3 / 2024-11-14
+- Add with-try macro to nodely.api.v0, enabling adding an exception handler globally to an environment.
+
 ## 2.0.2 / 2024-11-14
 - Remove the default engine behavior in internal applicative eval functions
 

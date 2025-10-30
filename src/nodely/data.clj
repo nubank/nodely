@@ -116,9 +116,115 @@
      :sequence (recur (::process-node node)
                       (conj inputs (::input node))))))
 
+(defn catching
+  "Like `clojure.core/comp`, except only affects throw completions of
+  the wrapped `g`. `f` must be a function of a single Exception, and
+  will be passed the exception thrown from `g` if `g` completes
+  exceptionally."
+  [f g]
+  (fn [& args]
+    (try (apply g args)
+         (catch Throwable t (f t)))))
+
+(defn update-leaf
+  [leaf f compositor]
+  ;; f new function, arg is old function
+  (update leaf :nodely.data/fn #(compositor f %)))
+
+(declare env-update-helper)
+
+(defn update-branch
+  [{::keys [condition truthy falsey]}
+   f
+   {:keys [apply-to-condition?]
+    :or   {apply-to-condition? false} :as opts}
+   compositor]
+  #::{:type      :branch
+      :condition (if apply-to-condition?
+                   (env-update-helper condition f opts compositor)
+                   condition)
+      :falsey    (env-update-helper falsey f opts compositor)
+      :truthy    (env-update-helper truthy f opts compositor)})
+
+(defn update-sequence
+  [sequence f compositor]
+  (update sequence ::process-node env-update-helper f {} compositor))
+
+(defn env-update-helper
+  [node f opts compositor]
+  (case (::type node)
+    :value    (update node ::value f)
+    :leaf     (update-leaf node f compositor)
+    :branch   (update-branch node f opts compositor)
+    :sequence (update-sequence node f compositor)))
+
+(defn update-node
+  ([node f opts]
+   (env-update-helper node f opts comp))
+  ([node f]
+   (update-node node f {})))
+
+(defn catch-node
+  ([node f opts]
+   (env-update-helper node f opts catching))
+  ([node f]
+   (catch-node node f {})))
+
 ;;
 ;; Env Utils
 ;;
+
+(defn with-error-handler
+  [env handler]
+  (update-vals env #(catch-node % handler {:apply-to-condition? true})))
+
+(defn- tuple-to-handler
+  [m]
+  (fn [error]
+    (if-let [f (some (fn [[ex-class handler]] (when (instance? ex-class error) handler)) m)]
+      (f error)
+      (throw error))))
+
+(defn- with-try-expr
+  [clauses]
+  (let [clauses (into [] (for [[c t s expr] clauses]
+                           (do (assert (= c 'catch))
+                               (if-let [t (resolve t)]
+                                 [t (eval `(fn [~s] ~expr))]
+                                 (throw (ex-info (str "Could not resolve exception class: " t) {:type t}))))))]
+    clauses))
+
+(defmacro with-try
+  "Macro
+
+  `with-try` will apply an error handling semantic to every leaf,
+  branch, and sequence node in a provided environment. If any such
+  nodes throw an exception, the catch expressions described in the
+  body of `with-try` will be evaluated. The resulting value of the
+  matching catch clause will become the value of the node which threw
+  the exception.
+
+  `with-try` has syntax equivalent to Clojure's `try` special form for
+  `catch` clauses but does not currently support use of a `finally`
+  clause.
+
+  `with-try` creates a policy across an entire environment
+  indiscriminately, when it is possible, clients are advised to catch
+  exceptional cases in the implementations of leaf/branch/sequence
+  nodes explicitly.
+
+  example:
+
+  (with-try {:a (>leaf (/ 5 ?b))
+             :b (>value 0)}
+    (catch ArithmeticException _ Double/NaN)
+    (catch NullPointerException _ 0))
+
+  will result in `:a` evaluating to 0"
+  [env & body]
+  `(with-error-handler
+     ~env
+     (tuple-to-handler ~(with-try-expr body))))
 
 (s/defn get-value :- s/Any
   [env :- Env

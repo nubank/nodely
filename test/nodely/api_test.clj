@@ -246,3 +246,40 @@
                    :supported-engine-names set?}
                   (try (api/eval-node-channel env (>leaf (inc ?z)) {::api/engine :core.async.doesnt-exist})
                        (catch clojure.lang.ExceptionInfo e (ex-data e)))))))
+
+(defn with-try-engine-test-suite
+  [engine-key]
+  (t/testing (name engine-key)
+    (t/testing "Exception types must be resolvable at with-try expansion time"
+      (t/matching "Could not resolve exception class: NonSenseException"
+                  (try
+                    (eval '(nodely.api.v0/with-try exceptions-all-the-way-down
+                             (catch NonSenseException _ 0)))
+                    (catch clojure.lang.Compiler$CompilerException e
+                      (ex-message (.getCause e))))))
+
+    (t/testing "with-try catches exceptions informed by class inheritance and catch clause ordering"
+      (t/matching 0
+                  (api/eval-key
+                   (api/with-try exceptions-all-the-way-down
+                     (catch Throwable _ -3)
+                     (catch clojure.lang.ExceptionInfo _ 0))
+                   :d {::api/engine engine-key})))
+
+    (t/testing "with-try order of clauses can preempt inheritance"
+      (t/matching 0
+                  (api/eval-key
+                   (api/with-try exceptions-all-the-way-down
+                     (catch clojure.lang.ExceptionInfo _ -3)
+                     (catch Throwable _ 0))
+                   :d {::api/engine engine-key})))))
+
+(t/deftest with-try
+  (let [remove-keys (conj #{:core-async.iterative-scheduling
+                            :async.virtual-futures}
+                          (when  (try (import java.util.concurrent.ThreadPerTaskExecutor)
+                                      (catch Throwable t t))
+                            :applicative.virtual-future))]
+    (for [engine (set/difference (set (keys api/engine-data))
+                                 remove-keys)]
+      (with-try-engine-test-suite engine))))

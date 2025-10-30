@@ -20,6 +20,7 @@
              nodely.data/leaf
              nodely.data/sequence
              nodely.data/branch
+             nodely.data/with-try
              engine-core/checked-env)
 
 (import-fn nodely.engine.lazy/eval-node-with-values eval-node-with-values)
