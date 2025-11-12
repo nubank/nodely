@@ -289,3 +289,9 @@
     promesa/context     java.util.concurrent.CompletableFuture
     core-async/context  clojure.core.async.impl.channels.ManyToManyChannel
     synchronous/context nodely.engine.applicative.synchronous.Box))
+
+(deftest schedule
+  (let [lazy-env (applicative/schedule {:a (data/value 1)} :a {::applicative/context core-async/context})]
+    (is (= nodely.engine.lazy_env.LazySchedulingEnvironment  (type lazy-env)))
+    (is (= (data/value 1) (async/<!! (get lazy-env :a))))))
+

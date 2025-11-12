@@ -90,6 +90,13 @@
     (app/fmap (partial async/put! chan) contextual-v)
     chan))
 
+(defn schedule
+  "schedule key k to be evaluated within env, returns lazy environment"
+  [env k opts]
+  (let [lazy-env (lazy-env/lazy-env env eval-in-context opts)
+        _ (get lazy-env k)]
+    lazy-env))
+
 (defn eval
   [env k opts]
   (let [lazy-env (lazy-env/lazy-env env eval-in-context opts)]
