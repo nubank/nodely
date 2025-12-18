@@ -170,6 +170,38 @@
   ([node f]
    (catch-node node f {})))
 
+(comment
+  (require '[criterium.core :as criterium])
+
+  (defn time-body
+    [{:keys [k s]} f]
+    (fn [args]
+      (let [start# (criterium/timestamp)
+            ret# (f args)
+            finish# (criterium/timestamp)]
+        (swap! s assoc k (- finish# start#))
+        ret#)))
+
+  ; (update-node (leaf #{} #(Thread/sleep 1000)) new-value {})
+
+  (do
+    (def my-atom (atom {}))
+    (def updated-node (env-update-helper (leaf #{} (fn [_] (Thread/sleep 1000))) {:k :x :s my-atom} {} time-body))
+
+    (def update-node-branch (let [condition (leaf #{} (fn [_] (do (Thread/sleep 1000) true)))
+                                  truthy    (leaf #{} (fn [_] (Thread/sleep 1000)))
+                                  falsey    (value 20)]
+                             (env-update-helper (branch condition truthy falsey) {:k :y :s my-atom} {} time-body)))
+
+    {:x {:condition 1000 :truthy 1000 :falsey 1000}}
+
+    ((:nodely.data/fn updated-node) {})
+    @my-atom
+    ;
+    )
+;
+  )
+
 ;;
 ;; Env Utils
 ;;
