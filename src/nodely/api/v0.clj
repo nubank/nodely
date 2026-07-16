@@ -2,12 +2,12 @@
   (:refer-clojure :exclude [cond eval sequence])
   (:require
    [nodely.data]
+   [nodely.engine.lazy :as engine.lazy]
    [nodely.engine.applicative :as applicative]
    [nodely.engine.core :as engine-core]
    [nodely.engine.protocols :as engine.protocols]
    [nodely.syntax :as syntax]
-   [nodely.vendor.potemkin :refer [import-fn import-vars]])
-  (:import [nodely.engine.lazy LazyEngine]))
+   [nodely.vendor.potemkin :refer [import-fn import-vars]]))
 
 (import-vars nodely.syntax/>cond
              nodely.syntax/>if
@@ -93,7 +93,7 @@
                                      ::eval-key-channel     true
                                      ::enable-deref         core-async-failure}
    :sync.lazy                       {::protocol-engine?     true
-                                     ::instance-constructor #(LazyEngine.)
+                                     ::instance-constructor #(engine.lazy/->LazyEngine)
                                      ; ::ns-name              'nodely.engine.lazy
                                      ::opts-fn              (constantly nil)
                                      ; ::eval-key-channel     true
