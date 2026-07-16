@@ -191,7 +191,7 @@
     (def update-node-branch (let [condition (leaf #{} (fn [_] (do (Thread/sleep 1000) true)))
                                   truthy    (leaf #{} (fn [_] (Thread/sleep 1000)))
                                   falsey    (value 20)]
-                             (env-update-helper (branch condition truthy falsey) {:k :y :s my-atom} {} time-body)))
+                              (env-update-helper (branch condition truthy falsey) {:k :y :s my-atom} {} time-body)))
 
     {:x {:condition 1000 :truthy 1000 :falsey 1000}}
 

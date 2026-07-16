@@ -2,9 +2,9 @@
   (:refer-clojure :exclude [cond eval sequence])
   (:require
    [nodely.data]
-   [nodely.engine.lazy :as engine.lazy]
    [nodely.engine.applicative :as applicative]
    [nodely.engine.core :as engine-core]
+   [nodely.engine.lazy :as engine.lazy]
    [nodely.engine.protocols :as engine.protocols]
    [nodely.syntax :as syntax]
    [nodely.vendor.potemkin :refer [import-fn import-vars]]))
@@ -30,47 +30,47 @@
 
 (def virtual-future-failure
   (delay
-    (try (import java.util.concurrent.ThreadPerTaskExecutor)
-         (require 'nodely.engine.virtual-workers
-                  'nodely.engine.applicative.virtual-future)
-         (catch Exception e
-           {:msg              "Classloader could not locate `java.util.concurrent.ThreadPerTaskExecutor`, virtual futures require JDK 21 or higher."
-            ::error           :missing-class
-            ::requested-class "java.util.concurrent.ThreadPerTaskExecutor"
-            :cause            e}))))
+   (try (import java.util.concurrent.ThreadPerTaskExecutor)
+        (require 'nodely.engine.virtual-workers
+                 'nodely.engine.applicative.virtual-future)
+        (catch Exception e
+          {:msg              "Classloader could not locate `java.util.concurrent.ThreadPerTaskExecutor`, virtual futures require JDK 21 or higher."
+           ::error           :missing-class
+           ::requested-class "java.util.concurrent.ThreadPerTaskExecutor"
+           :cause            e}))))
 
 (def core-async-failure
   (delay
-    (try (require 'nodely.engine.applicative.core-async
-                  'nodely.engine.core-async.core
-                  'nodely.engine.core-async.iterative-scheduling
-                  'nodely.engine.core-async.lazy-scheduling)
-         (catch Exception e
-           {:msg                   "Could not locate core-async on classpath."
-            ::error                :missing-ns
-            ::requested-namespaces '[nodely.engine.applicative.core-async
-                                     nodely.engine.core-async.core
-                                     nodely.engine.core-async.iterative-scheduling
-                                     nodely.engine.core-async.lazy-scheduling]
-            :cause                 e}))))
+   (try (require 'nodely.engine.applicative.core-async
+                 'nodely.engine.core-async.core
+                 'nodely.engine.core-async.iterative-scheduling
+                 'nodely.engine.core-async.lazy-scheduling)
+        (catch Exception e
+          {:msg                   "Could not locate core-async on classpath."
+           ::error                :missing-ns
+           ::requested-namespaces '[nodely.engine.applicative.core-async
+                                    nodely.engine.core-async.core
+                                    nodely.engine.core-async.iterative-scheduling
+                                    nodely.engine.core-async.lazy-scheduling]
+           :cause                 e}))))
 
 (def manifold-failure
   (delay
-    (try (require 'nodely.engine.manifold)
-         (catch Exception e
-           {:msg                   "Could not locate manifold on classpath."
-            ::error                :missing-ns
-            ::requested-namespaces '[nodely.engine.manifold]
-            :cause                 e}))))
+   (try (require 'nodely.engine.manifold)
+        (catch Exception e
+          {:msg                   "Could not locate manifold on classpath."
+           ::error                :missing-ns
+           ::requested-namespaces '[nodely.engine.manifold]
+           :cause                 e}))))
 
 (def promesa-failure
   (delay
-    (try (require 'nodely.engine.applicative.promesa)
-         (catch Exception e
-           {:msg                   "Could not locate promesa on classpath."
-            ::error                :missing-ns
-            ::requested-namespaces '[nodely.engine.applicative.promesa]
-            :cause                 e}))))
+   (try (require 'nodely.engine.applicative.promesa)
+        (catch Exception e
+          {:msg                   "Could not locate promesa on classpath."
+           ::error                :missing-ns
+           ::requested-namespaces '[nodely.engine.applicative.promesa]
+           :cause                 e}))))
 
 (def engine-data
   {:core-async.lazy-scheduling      {::ns-name              'nodely.engine.core-async.lazy-scheduling

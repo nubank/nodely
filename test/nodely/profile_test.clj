@@ -1,9 +1,8 @@
 (ns nodely.profile-test
   (:require
+   [clojure.core.async :as core.async]
    [clojure.test :refer [deftest is testing]]
    [nodely.api.v0 :as nodely]
-   [nodely.data :as data]
-   [clojure.core.async :as core.async]
    [nodely.api.v0 :as api]
    [nodely.profile :as profile]))
 
@@ -40,8 +39,8 @@
     (let [env {:x (nodely/>value 4)
                :y (nodely/>value 100)
                :z (nodely/>if (nodely/>leaf (even? ?x))
-                    (nodely/>leaf (+ ?x 1))
-                    (nodely/>leaf ?y))}
+                              (nodely/>leaf (+ ?x 1))
+                              (nodely/>leaf ?y))}
           [profiled-env profile-atom] (profile/profile-env env)
           result (nodely/eval-key profiled-env :z {::nodely/engine :sync.lazy})]
       (is (= 5 result))
@@ -59,8 +58,8 @@
     (let [env {:x (nodely/>value 3)
                :y (nodely/>value 100)
                :z (nodely/>if (nodely/>leaf (even? ?x))
-                    (nodely/>leaf (+ ?x 1))
-                    (nodely/>leaf ?y))}
+                              (nodely/>leaf (+ ?x 1))
+                              (nodely/>leaf ?y))}
           [profiled-env profile-atom] (profile/profile-env env)
           result (nodely/eval-key profiled-env :z {::nodely/engine :sync.lazy})]
       (is (= 100 result))
@@ -90,10 +89,10 @@
                :x (nodely/>value 10)
                :y (nodely/>value 20)
                :z (nodely/>if (nodely/>leaf ?a)
-                    (nodely/>if (nodely/>leaf ?b)
-                      (nodely/>leaf ?x)
-                      (nodely/>leaf ?y))
-                    (nodely/>value 0))}
+                              (nodely/>if (nodely/>leaf ?b)
+                                          (nodely/>leaf ?x)
+                                          (nodely/>leaf ?y))
+                              (nodely/>value 0))}
           [profiled-env profile-atom] (profile/profile-env env)
           result (nodely/eval-key profiled-env :z {::nodely/engine :sync.lazy})]
       (is (= 20 result))
