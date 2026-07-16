@@ -23,7 +23,10 @@
     true)
 
   (-enable-deref [_engine]
-    enable-deref))
+    enable-deref)
+
+  (-prepare-opts [_engine _opts]
+    nil))
 
 (defn eval
   [env k]

@@ -93,11 +93,8 @@
                                      ::eval-key-channel     true
                                      ::enable-deref         core-async-failure}
    :sync.lazy                       {::protocol-engine?     true
-                                     ::instance-constructor #(engine.lazy/->LazyEngine)
-                                     ; ::ns-name              'nodely.engine.lazy
-                                     ::opts-fn              (constantly nil)
-                                     ; ::eval-key-channel     true
-                                     }
+                                     ::instance-constructor engine.lazy/->LazyEngine
+                                     ::eval-key-channel     true}
    :async.virtual-futures           {::ns-name              'nodely.engine.virtual-workers
                                      ::opts-fn              (constantly nil)
                                      ::eval-key-channel     true
@@ -131,62 +128,55 @@
                     {:specified-engine-name engine-name
                      :supported-engine-names (set (keys engine-data))}))))
 
-(defn- protocol-engine-function [engine-name use]
-  (let [engine-data        (engine-data engine-name)
-        engine-instance    ((::instance-constructor engine-data))
-        use-to-protocol-fn {'eval             engine.protocols/eval
-                            'eval-key         engine.protocols/eval-key
-                            'eval-key-channel engine.protocols/eval-key-channel}]
-    (if-let [{:keys [msg cause] :as enable-failure} @(engine.protocols/-enable-deref engine-instance)]
-      (throw (ex-info msg
-                      (-> enable-failure
-                          (dissoc :msg :cause)
-                          (assoc ::specified-engine-name engine-name))
-                      cause))
-      (partial (use-to-protocol-fn use) engine-instance))))
-
-(defn- engine-fn
-  [engine-name use]
-  (let [engine-data (engine-data engine-name)]
-    (if (::protocol-engine? engine-data)
-      (protocol-engine-function engine-name use)
-      (data-engine-function engine-name use))))
-
-(def engine-fn (memoize engine-fn))
+(def engine-fn (memoize data-engine-function))
 
 (defn eval
   ([env k]
    (eval env k {}))
-  ([env k {engine ::engine
-           :or    {engine :core-async.lazy-scheduling}
-           :as    opts}]
-
-   (let [efn (engine-fn engine 'eval)]
-     (if-let [opts ((::opts-fn (engine-data engine)) opts)]
-       (efn env k opts)
-       (efn env k)))))
+  ([env k {engine-name ::engine
+           :or         {engine-name :core-async.lazy-scheduling}
+           :as         opts}]
+   (let [engine-data      (engine-data engine-name)
+         protocol-engine? (::protocol-engine? engine-data)
+         engine           (when protocol-engine? ((::instance-constructor engine-data)))]
+     (if protocol-engine?
+       (engine.protocols/eval engine env k (engine.protocols/-prepare-opts engine opts))
+       (let [efn (engine-fn engine-name 'eval)]
+         (if-let [opts ((::opts-fn engine-data) opts)]
+           (efn env k opts)
+           (efn env k)))))))
 
 (defn eval-key
   ([env k]
    (eval-key env k {}))
-  ([env k {engine ::engine
-           :or    {engine :core-async.lazy-scheduling}
-           :as    opts}]
-   (let [efn (engine-fn engine 'eval-key)]
-     (if-let [opts ((::opts-fn (engine-data engine)) opts)]
-       (efn env k opts)
-       (efn env k)))))
+  ([env k {engine-name ::engine
+           :or         {engine-name :core-async.lazy-scheduling}
+           :as         opts}]
+   (let [engine-data      (engine-data engine-name)
+         protocol-engine? (::protocol-engine? engine-data)
+         engine           (when protocol-engine? ((::instance-constructor engine-data)))]
+     (if protocol-engine?
+       (engine.protocols/eval-key engine env k (engine.protocols/-prepare-opts engine opts))
+       (let [efn (engine-fn engine-name 'eval-key)]
+         (if-let [opts ((::opts-fn engine-data) opts)]
+           (efn env k opts)
+           (efn env k)))))))
 
 (defn eval-key-channel
   ([env k]
    (eval-key-channel env k {}))
-  ([env k {engine ::engine
-           :or    {engine :core-async.lazy-scheduling}
+  ([env k {engine-name ::engine
+           :or    {engine-name :core-async.lazy-scheduling}
            :as    opts}]
-   (let [efn (engine-fn engine 'eval-key-channel)]
-     (if-let [opts ((::opts-fn (engine-data engine)) opts)]
-       (efn env k opts)
-       (efn env k)))))
+   (let [engine-data      (engine-data engine-name)
+         protocol-engine? (::protocol-engine? engine-data)
+         engine           (when protocol-engine? ((::instance-constructor engine-data)))]
+     (if protocol-engine?
+       (engine.protocols/eval-key-channel engine env k (engine.protocols/-prepare-opts engine opts))
+       (let [efn (engine-fn engine-name 'eval-key-channel)]
+         (if-let [opts ((::opts-fn engine-data) opts)]
+           (efn env k opts)
+           (efn env k)))))))
 
 (defn eval-node
   ([env node]
