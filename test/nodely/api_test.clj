@@ -62,7 +62,7 @@
 (defn ensure-unrealized-delay
   [sym]
   (when (realized? (deref (resolve sym)))
-    (require :reload '[nodely.api.v0])))
+    (require :reload (symbol (namespace sym)))))
 
 (defn- testing-require-delay-call
   [ns-sym delay message cause call-fn]
@@ -75,7 +75,7 @@
                              (apply orig-require args)))
             res          (with-redefs [require bomb]
                            (call-fn))]
-        (require :reload 'nodely.api.v0)
+        (require :reload (symbol (namespace delay)))
         res)))
 
 (defmacro testing-require-delay
@@ -100,7 +100,7 @@
           5
           (async/<!! (api/eval-key-channel env :z {::api/engine :core-async.lazy-scheduling}))))))
     (testing-require-delay
-     nodely.engine.core-async.core nodely.api.v0/core-async-failure
+     nodely.engine.core-async.lazy-scheduling nodely.engine.core-async.lazy-scheduling-engine/enable-deref
      "Kaboom! We don't have core.async for pretend" :test-core-async-failure
      (t/testing "without core.async on the classpath"
        (t/testing "attempting to use core.async"
