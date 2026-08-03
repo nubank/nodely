@@ -6,8 +6,12 @@
    [nodely.data :as data]))
 
 (defn- expression-symbols
+  "Collect symbols that appear as leaves in `expr`.
+
+  Uses `symbol?` (not `(complement seqable?)`) so non-symbol atoms such as
+  numbers, keywords, and strings are excluded before later `?`-prefix filtering."
   [expr]
-  (set (filter (complement seqable?) (tree-seq seqable? seq expr))))
+  (set (filter symbol? (tree-seq seqable? seq expr))))
 
 (defn- question-mark->keyword
   [s]

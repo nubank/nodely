@@ -218,3 +218,13 @@
                         :process-node #::data{:type :value
                                               :value ifn?}}
                 (>sequence inc ?foo/bar)))))
+
+(deftest expression-symbols-collects-only-symbols
+  ;; #59: leaves must be filtered with `symbol?`, not `(complement seqable?)`,
+  ;; so non-symbol atoms are never treated as `?`-inputs.
+  (testing "numbers and keywords in an expression do not become inputs"
+    (is (match? #::data{:type :leaf :inputs #{:x} :fn ifn?}
+                (>leaf (+ ?x 1 :not-an-input)))))
+  (testing "only `?`-prefixed symbols become inputs"
+    (is (match? #::data{:type :leaf :inputs #{:y} :fn ifn?}
+                (>leaf (str ?y "suffix"))))))
