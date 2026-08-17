@@ -4,14 +4,18 @@ This guide is for continuing an in-progress refactor: converting each entry in
 `nodely.api.v0/engine-data` from a plain data map into a type that implements
 `nodely.engine.protocols/Engine`.
 
-Two engines are already migrated — read them as worked examples before you
+Three engines are already migrated — read them as worked examples before you
 start:
 
 - `:sync.lazy` → `nodely.engine.lazy/LazyEngine` — the **simple** case
   (no optional dependency).
 - `:core-async.lazy-scheduling` →
   `nodely.engine.core-async.lazy-scheduling-engine/CoreAsyncLazySchedulingEngine`
-  — the **optional-dependency** case (the full pattern).
+  — the **optional-dependency, channel-SUPPORTING** case (the full pattern).
+- `:core-async.iterative-scheduling` →
+  `nodely.engine.core-async.iterative-scheduling-engine/CoreAsyncIterativeSchedulingEngine`
+  — the **optional-dependency, channel-LESS** case (same facade pattern, but
+  `-eval-key-channel` throws `UnsupportedOperationException`; see PITFALL 3b).
 
 Do **one** engine at a time. Run the tests after each. Do not try to do several
 at once.
@@ -88,7 +92,12 @@ implementation **lazily**, inside the method bodies. See
   engine.protocols/Engine
   (-eval             [_ env k opts] ((impl 'eval) env k opts))
   (-eval-key         [_ env k opts] ((impl 'eval-key) env k opts))
+  ;; -eval-key-channel: pick ONE of the two shapes below -- see PITFALL 3b.
+  ;;   channel-SUPPORTING engine (impl HAS an eval-key-channel fn):
   (-eval-key-channel [_ env k opts] ((impl 'eval-key-channel) env k opts))
+  ;;   channel-LESS engine (impl has NO eval-key-channel fn):
+  ;;   (-eval-key-channel [_ _ _ _]
+  ;;     (throw (UnsupportedOperationException. "Engine :the-engine does not support eval-key-channel.")))
   (-eval-key-channel-supported? [_] <true-or-false>)
   (-enable-deref     [_] enable-deref)
   (-prepare-opts     [_ opts] <see PITFALL 3>))
@@ -123,6 +132,31 @@ thing. Do **not** blindly copy `LazyEngine`'s `nil`.
   which is fine because `-enable-deref` has already confirmed the library is
   present by the time `-prepare-opts` is called).
 
+### PITFALL 3b — channel-LESS engines must THROW from `-eval-key-channel`
+
+**Classify first:** does the engine's data-map entry have `::eval-key-channel
+true`? Equivalently, does its impl namespace define an `eval-key-channel` fn?
+
+- **YES (channel-supporting)** → `-eval-key-channel-supported?` returns `true`
+  and `-eval-key-channel` delegates: `((impl 'eval-key-channel) env k opts)`.
+  Keep `::eval-key-channel true` in the v0 entry.
+
+- **NO (channel-less)** — e.g. `:core-async.iterative-scheduling`,
+  `:async.manifold`, `:applicative.promesa` → `-eval-key-channel-supported?`
+  returns `false` and `-eval-key-channel` must
+  `(throw (UnsupportedOperationException. "Engine :the-engine does not support eval-key-channel."))`.
+  **Do NOT** copy the delegating body: `(impl 'eval-key-channel)` resolves to
+  `nil` for a channel-less impl, so calling it throws a bare, uninformative
+  `NullPointerException` ("cannot invoke nil"). That NPE is what the old
+  data-map dispatch did by accident; the migration is the chance to replace it
+  with an intentional `UnsupportedOperationException`. **Omit** `::eval-key-channel`
+  from the v0 entry entirely (do not set it `false`; the key's presence is what
+  the tests read via `channel-interface`).
+
+  Worked example: `iterative_scheduling_engine.clj` is the channel-less
+  core.async engine — read it alongside `lazy_scheduling_engine.clj` (the
+  channel-supporting one) to see the two shapes side by side.
+
 ---
 
 ## Editing `api/v0.clj`
@@ -139,8 +173,9 @@ thing. Do **not** blindly copy `LazyEngine`'s `nil`.
 
 ### PITFALL 4 — do not delete shared `*-failure` delays
 
-`core-async-failure` is used by `:core-async.iterative-scheduling`,
-`:applicative.core-async`, and the `>channel-leaf` macro. The other `*-failure`
+`core-async-failure` is used by `:applicative.core-async` and the
+`>channel-leaf` macro (it was also used by `:core-async.iterative-scheduling`
+until that engine was migrated). The other `*-failure`
 delays are likewise shared. Migrating one engine does not free its delay. Each
 migrated engine gets its **own** `enable-deref` in its facade namespace; leave
 the `v0.clj` delays alone until every engine that uses one is migrated.

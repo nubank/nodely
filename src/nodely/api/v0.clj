@@ -4,6 +4,7 @@
    [nodely.data]
    [nodely.engine.applicative :as applicative]
    [nodely.engine.core :as engine-core]
+   [nodely.engine.core-async.iterative-scheduling-engine :as engine.core-async.iterative-scheduling-engine]
    [nodely.engine.core-async.lazy-scheduling-engine :as engine.core-async.lazy-scheduling-engine]
    [nodely.engine.lazy :as engine.lazy]
    [nodely.engine.protocols :as engine.protocols]
@@ -77,9 +78,8 @@
   {:core-async.lazy-scheduling      {::protocol-engine?     true
                                      ::instance-constructor engine.core-async.lazy-scheduling-engine/->CoreAsyncLazySchedulingEngine
                                      ::eval-key-channel     true}
-   :core-async.iterative-scheduling {::ns-name              'nodely.engine.core-async.iterative-scheduling
-                                     ::opts-fn              identity
-                                     ::enable-deref         core-async-failure}
+   :core-async.iterative-scheduling {::protocol-engine?     true
+                                     ::instance-constructor engine.core-async.iterative-scheduling-engine/->CoreAsyncIterativeSchedulingEngine}
    :async.manifold                  {::ns-name              'nodely.engine.manifold
                                      ::opts-fn              (constantly nil)
                                      ::enable-deref         manifold-failure}

@@ -283,3 +283,23 @@
     (for [engine (set/difference (set (keys api/engine-data))
                                  remove-keys)]
       (with-try-engine-test-suite engine))))
+
+(t/deftest iterative-scheduling-eval-key-channel-unsupported
+  (t/testing "eval-key-channel is unsupported by :core-async.iterative-scheduling"
+    (t/matching #"does not support eval-key-channel"
+                (try (api/eval-key-channel env :z {::api/engine :core-async.iterative-scheduling})
+                     (catch UnsupportedOperationException e
+                       (ex-message e))))))
+
+(t/deftest iterative-scheduling-graceful-degradation
+  (t/testing "engine blowing up"
+    (testing-require-delay
+     nodely.engine.core-async.iterative-scheduling nodely.engine.core-async.iterative-scheduling-engine/enable-deref
+     "Kaboom! We don't have core.async for pretend" :test-core-async-failure
+     (t/testing "without core.async on the classpath"
+       (t/testing "attempting to use iterative-scheduling"
+         (t/matching
+          #"Could not locate core-async on classpath"
+          (try (api/eval env :z {::api/engine :core-async.iterative-scheduling})
+               (catch Throwable t
+                 (ex-message t)))))))))
