@@ -62,7 +62,7 @@
 (defn ensure-unrealized-delay
   [sym]
   (when (realized? (deref (resolve sym)))
-    (require :reload '[nodely.api.v0])))
+    (require :reload (symbol (namespace sym)))))
 
 (defn- testing-require-delay-call
   [ns-sym delay message cause call-fn]
@@ -75,7 +75,7 @@
                              (apply orig-require args)))
             res          (with-redefs [require bomb]
                            (call-fn))]
-        (require :reload 'nodely.api.v0)
+        (require :reload (symbol (namespace delay)))
         res)))
 
 (defmacro testing-require-delay
@@ -100,7 +100,21 @@
           5
           (async/<!! (api/eval-key-channel env :z {::api/engine :core-async.lazy-scheduling}))))))
     (testing-require-delay
-     nodely.engine.core-async.core nodely.api.v0/core-async-failure
+     nodely.engine.virtual-workers nodely.engine.async.virtual-futures-engine/enable-deref
+     "Kaboom! We're not on JVM 21 for pretend" :test-virtual-future-failure
+     (t/testing "without virtual futures in the JVM"
+       (t/testing "attempting to use virtual futures"
+         (t/matching
+          #"Classloader could not locate `java.util.concurrent.ThreadPerTaskExecutor`"
+          (try (api/eval-key-channel env :z {::api/engine :async.virtual-futures})
+               (catch Throwable t
+                 (ex-message t)))))
+       (t/testing "attempting to use core.async"
+         (t/matching
+          5
+          (async/<!! (api/eval-key-channel env :z {::api/engine :core-async.lazy-scheduling}))))))
+    (testing-require-delay
+     nodely.engine.core-async.lazy-scheduling nodely.engine.core-async.lazy-scheduling-engine/enable-deref
      "Kaboom! We don't have core.async for pretend" :test-core-async-failure
      (t/testing "without core.async on the classpath"
        (t/testing "attempting to use core.async"
@@ -283,3 +297,23 @@
     (for [engine (set/difference (set (keys api/engine-data))
                                  remove-keys)]
       (with-try-engine-test-suite engine))))
+
+(t/deftest iterative-scheduling-eval-key-channel-unsupported
+  (t/testing "eval-key-channel is unsupported by :core-async.iterative-scheduling"
+    (t/matching #"does not support eval-key-channel"
+                (try (api/eval-key-channel env :z {::api/engine :core-async.iterative-scheduling})
+                     (catch UnsupportedOperationException e
+                       (ex-message e))))))
+
+(t/deftest iterative-scheduling-graceful-degradation
+  (t/testing "engine blowing up"
+    (testing-require-delay
+     nodely.engine.core-async.iterative-scheduling nodely.engine.core-async.iterative-scheduling-engine/enable-deref
+     "Kaboom! We don't have core.async for pretend" :test-core-async-failure
+     (t/testing "without core.async on the classpath"
+       (t/testing "attempting to use iterative-scheduling"
+         (t/matching
+          #"Could not locate core-async on classpath"
+          (try (api/eval env :z {::api/engine :core-async.iterative-scheduling})
+               (catch Throwable t
+                 (ex-message t)))))))))
