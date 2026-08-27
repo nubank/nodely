@@ -100,6 +100,20 @@
           5
           (async/<!! (api/eval-key-channel env :z {::api/engine :core-async.lazy-scheduling}))))))
     (testing-require-delay
+     nodely.engine.virtual-workers nodely.engine.async.virtual-futures-engine/enable-deref
+     "Kaboom! We're not on JVM 21 for pretend" :test-virtual-future-failure
+     (t/testing "without virtual futures in the JVM"
+       (t/testing "attempting to use virtual futures"
+         (t/matching
+          #"Classloader could not locate `java.util.concurrent.ThreadPerTaskExecutor`"
+          (try (api/eval-key-channel env :z {::api/engine :async.virtual-futures})
+               (catch Throwable t
+                 (ex-message t)))))
+       (t/testing "attempting to use core.async"
+         (t/matching
+          5
+          (async/<!! (api/eval-key-channel env :z {::api/engine :core-async.lazy-scheduling}))))))
+    (testing-require-delay
      nodely.engine.core-async.lazy-scheduling nodely.engine.core-async.lazy-scheduling-engine/enable-deref
      "Kaboom! We don't have core.async for pretend" :test-core-async-failure
      (t/testing "without core.async on the classpath"

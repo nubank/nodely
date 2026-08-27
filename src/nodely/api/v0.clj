@@ -3,6 +3,7 @@
   (:require
    [nodely.data]
    [nodely.engine.applicative :as applicative]
+   [nodely.engine.async.virtual-futures-engine :as engine.async.virtual-futures-engine]
    [nodely.engine.core :as engine-core]
    [nodely.engine.core-async.iterative-scheduling-engine :as engine.core-async.iterative-scheduling-engine]
    [nodely.engine.core-async.lazy-scheduling-engine :as engine.core-async.lazy-scheduling-engine]
@@ -95,10 +96,9 @@
    :sync.lazy                       {::protocol-engine?     true
                                      ::instance-constructor engine.lazy/->LazyEngine
                                      ::eval-key-channel     true}
-   :async.virtual-futures           {::ns-name              'nodely.engine.virtual-workers
-                                     ::opts-fn              (constantly nil)
-                                     ::eval-key-channel     true
-                                     ::enable-deref         virtual-future-failure}
+   :async.virtual-futures           {::protocol-engine?     true
+                                     ::instance-constructor engine.async.virtual-futures-engine/->AsyncVirtualFuturesEngine
+                                     ::eval-key-channel     true}
    :applicative.virtual-future      {::ns-name              'nodely.engine.applicative
                                      ::opts-fn              #(assoc % ::applicative/context
                                                                     (var-get (resolve 'nodely.engine.applicative.virtual-future/context)))
