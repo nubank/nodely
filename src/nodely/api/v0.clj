@@ -3,6 +3,7 @@
   (:require
    [nodely.data]
    [nodely.engine.applicative :as applicative]
+   [nodely.engine.async.manifold-engine :as engine.async.manifold-engine]
    [nodely.engine.async.virtual-futures-engine :as engine.async.virtual-futures-engine]
    [nodely.engine.core :as engine-core]
    [nodely.engine.core-async.iterative-scheduling-engine :as engine.core-async.iterative-scheduling-engine]
@@ -81,9 +82,8 @@
                                      ::eval-key-channel     true}
    :core-async.iterative-scheduling {::protocol-engine?     true
                                      ::instance-constructor engine.core-async.iterative-scheduling-engine/->CoreAsyncIterativeSchedulingEngine}
-   :async.manifold                  {::ns-name              'nodely.engine.manifold
-                                     ::opts-fn              (constantly nil)
-                                     ::enable-deref         manifold-failure}
+   :async.manifold                  {::protocol-engine?     true
+                                     ::instance-constructor engine.async.manifold-engine/->AsyncManifoldEngine}
    :applicative.promesa             {::ns-name              'nodely.engine.applicative
                                      ::opts-fn              #(assoc % ::applicative/context
                                                                     (var-get (resolve 'nodely.engine.applicative.promesa/context)))
