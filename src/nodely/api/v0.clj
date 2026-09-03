@@ -58,15 +58,6 @@
                                     nodely.engine.core-async.lazy-scheduling]
            :cause                 e}))))
 
-(def manifold-failure
-  (delay
-   (try (require 'nodely.engine.manifold)
-        (catch Exception e
-          {:msg                   "Could not locate manifold on classpath."
-           ::error                :missing-ns
-           ::requested-namespaces '[nodely.engine.manifold]
-           :cause                 e}))))
-
 (def promesa-failure
   (delay
    (try (require 'nodely.engine.applicative.promesa)
