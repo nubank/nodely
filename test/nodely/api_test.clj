@@ -128,7 +128,7 @@
           5
           (api/eval-key env :z {::api/engine :async.manifold})))))
     (testing-require-delay
-     nodely.engine.manifold nodely.api.v0/manifold-failure
+     nodely.engine.manifold nodely.engine.async.manifold-engine/enable-deref
      "Kaboom! We don't have manifold for pretend" :test-manifold-failure
      (t/testing "without manifold on the classpath"
        (t/testing "attempting to use manifold"
