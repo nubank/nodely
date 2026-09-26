@@ -7,7 +7,7 @@
             [com.fasterxml.jackson.core/jackson-core "2.12.4"]]
 
   :dependencies [[org.clojure/clojure "1.12.0"]
-                 [aysylu/loom "1.0.2"]
+                 [aysylu/loom "1.2.2"]
                  [org.clojure/core.async "1.5.648" :scope "provided"]
                  [funcool/promesa "10.0.594" :scope "provided"]
                  [manifold "0.1.9-alpha5" :scope "provided"]
