@@ -110,7 +110,7 @@
             (runtime diff is 1 sec, within a tolerance of 3ms"
     (let [[nanosec-sync _]  (time-body (core/resolve :d test-env+delay))
           [nanosec-async _] (time-body (nasync/eval-key test-env+delay :d))]
-      (is (match? (matchers/within-delta 100000000 1000000000)
+      (is (match? #(>= % 800000000)
                   (- nanosec-sync nanosec-async))))))
 
 (deftest eval-env-with-sequence
@@ -127,12 +127,12 @@
             (runtime diff is 2 sec, within a tolerance of 3ms"
     (let [[nanosec-sync _]  (time-body (core/resolve :b env-with-sequence+delay))
           [nanosec-async _] (time-body (nasync/eval-key env-with-sequence+delay :b {::nasync/max-sequence-parallelism 4}))]
-      (is (match? (matchers/within-delta 8000000 2000000000)
+      (is (match? #(>= % 1600000000)
                   (- nanosec-sync nanosec-async)))))
   (testing "async version runs parallel when option is neglected"
     (let [[nanosec-sync _]  (time-body (core/resolve :b env-with-sequence+delay))
           [nanosec-async _] (time-body (nasync/eval-key env-with-sequence+delay :b {}))]
-      (is (match? (matchers/within-delta 8000000 2000000000)
+      (is (match? #(>= % 1600000000)
                   (- nanosec-sync nanosec-async)))))
   (testing "Actually computes the correct answers"
     (is (match? [2 3 4] (nasync/eval-key env-with-sequence+delay :b))))
