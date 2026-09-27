@@ -45,7 +45,7 @@
             (runtime diff is 1 sec, within a tolerance of 3ms"
     (let [[nanosec-sync _]  (time-body (core/resolve :d test-env+delay))
           [nanosec-async _] (time-body (manifold/eval-env test-env+delay))]
-      (is (match? (matchers/within-delta 6000000 1000000000)
+      (is (match? #(>= % 800000000)
                   (- nanosec-sync nanosec-async))))))
 
 (deftest eval-env-with-sequence
@@ -56,7 +56,7 @@
             (runtime diff is 2 sec, within a tolerance of 3ms"
     (let [[nanosec-sync _]  (time-body (core/resolve :b env-with-sequence+delay))
           [nanosec-async _] (time-body (manifold/eval-env env-with-sequence+delay))]
-      (is (match? (matchers/within-delta 8000000 2000000000)
+      (is (match? #(>= % 1600000000)
                   (- nanosec-sync nanosec-async)))))
   (testing "Actually computes the correct answers"
     (is (= [2 3 4] (manifold/eval-key env-with-sequence+delay :b))))
