@@ -2,7 +2,7 @@
   (:refer-clojure :exclude [cond eval sequence])
   (:require
    [nodely.data]
-   [nodely.engine.applicative :as applicative]
+   [nodely.engine.applicative.engine :as engine.applicative.engine]
    [nodely.engine.async.manifold-engine :as engine.async.manifold-engine]
    [nodely.engine.async.virtual-futures-engine :as engine.async.virtual-futures-engine]
    [nodely.engine.core :as engine-core]
@@ -58,15 +58,6 @@
                                     nodely.engine.core-async.lazy-scheduling]
            :cause                 e}))))
 
-(def promesa-failure
-  (delay
-   (try (require 'nodely.engine.applicative.promesa)
-        (catch Exception e
-          {:msg                   "Could not locate promesa on classpath."
-           ::error                :missing-ns
-           ::requested-namespaces '[nodely.engine.applicative.promesa]
-           :cause                 e}))))
-
 (def engine-data
   {:core-async.lazy-scheduling      {::protocol-engine?     true
                                      ::instance-constructor engine.core-async.lazy-scheduling-engine/->CoreAsyncLazySchedulingEngine
@@ -75,26 +66,22 @@
                                      ::instance-constructor engine.core-async.iterative-scheduling-engine/->CoreAsyncIterativeSchedulingEngine}
    :async.manifold                  {::protocol-engine?     true
                                      ::instance-constructor engine.async.manifold-engine/->AsyncManifoldEngine}
-   :applicative.promesa             {::ns-name              'nodely.engine.applicative
-                                     ::opts-fn              #(assoc % ::applicative/context
-                                                                    (var-get (resolve 'nodely.engine.applicative.promesa/context)))
-                                     ::enable-deref         promesa-failure}
-   :applicative.core-async          {::ns-name              'nodely.engine.applicative
-                                     ::opts-fn              #(assoc % ::applicative/context
-                                                                    (var-get (resolve 'nodely.engine.applicative.core-async/context)))
-                                     ::eval-key-channel     true
-                                     ::enable-deref         core-async-failure}
+   :applicative.promesa             {::protocol-engine? true
+                                     ::instance-constructor engine.applicative.engine/->promesa-applicative-engine
+                                     ::eval-key-channel true}
+   :applicative.core-async          {::protocol-engine? true
+                                     ::instance-constructor engine.applicative.engine/->core-async-applicative-engine
+                                     ::eval-key-channel true}
    :sync.lazy                       {::protocol-engine?     true
                                      ::instance-constructor engine.lazy/->LazyEngine
                                      ::eval-key-channel     true}
-   :async.virtual-futures           {::protocol-engine?     true
-                                     ::instance-constructor engine.async.virtual-futures-engine/->AsyncVirtualFuturesEngine
-                                     ::eval-key-channel     true}
-   :applicative.virtual-future      {::ns-name              'nodely.engine.applicative
-                                     ::opts-fn              #(assoc % ::applicative/context
-                                                                    (var-get (resolve 'nodely.engine.applicative.virtual-future/context)))
+   :async.virtual-futures           {::ns-name              'nodely.engine.virtual-workers
+                                     ::opts-fn              (constantly nil)
                                      ::eval-key-channel     true
-                                     ::enable-deref         virtual-future-failure}})
+                                     ::enable-deref         virtual-future-failure}
+   :applicative.virtual-future      {::protocol-engine? true
+                                     ::instance-constructor engine.applicative.engine/->virtual-future-applicative-engine
+                                     ::eval-key-channel true}})
 
 (defmacro >channel-leaf
   [expr]

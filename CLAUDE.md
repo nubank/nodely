@@ -4,7 +4,7 @@ This guide is for continuing an in-progress refactor: converting each entry in
 `nodely.api.v0/engine-data` from a plain data map into a type that implements
 `nodely.engine.protocols/Engine`.
 
-Three engines are already migrated — read them as worked examples before you
+These engines are already migrated — read them as worked examples before you
 start:
 
 - `:sync.lazy` → `nodely.engine.lazy/LazyEngine` — the **simple** case
@@ -16,6 +16,13 @@ start:
   `nodely.engine.core-async.iterative-scheduling-engine/CoreAsyncIterativeSchedulingEngine`
   — the **optional-dependency, channel-LESS** case (same facade pattern, but
   `-eval-key-channel` throws `UnsupportedOperationException`; see PITFALL 3b).
+- The **applicative family** (`:applicative.promesa`, `:applicative.core-async`,
+  `:applicative.virtual-future`) → a single
+  `nodely.engine.applicative.engine/ApplicativeEngine` — the **one-type,
+  many-contexts** case: all three are ONE deftype parameterized by their
+  applicative context symbol + gate, and all are channel-SUPPORTING. See
+  PITFALL 7 for the design and the `redeem` combinator that makes their
+  `eval-key-channel` deliver exceptions.
 
 Do **one** engine at a time. Run the tests after each. Do not try to do several
 at once.
@@ -142,7 +149,7 @@ true`? Equivalently, does its impl namespace define an `eval-key-channel` fn?
   Keep `::eval-key-channel true` in the v0 entry.
 
 - **NO (channel-less)** — e.g. `:core-async.iterative-scheduling`,
-  `:async.manifold`, `:applicative.promesa` → `-eval-key-channel-supported?`
+  `:async.manifold` → `-eval-key-channel-supported?`
   returns `false` and `-eval-key-channel` must
   `(throw (UnsupportedOperationException. "Engine :the-engine does not support eval-key-channel."))`.
   **Do NOT** copy the delegating body: `(impl 'eval-key-channel)` resolves to
@@ -222,16 +229,59 @@ engine throws its "Could not locate ..." message.
 
 ---
 
-## PITFALL 7 — the applicative-family engines are NOT simple; do them last
+## PITFALL 7 — the applicative family: ONE type, many contexts (MIGRATED)
 
 `:applicative.promesa`, `:applicative.core-async`, and
 `:applicative.virtual-future` all share the implementation namespace
 `nodely.engine.applicative`, which **itself requires `clojure.core.async`** and
-injects a per-engine "context" resolved from an optional namespace. That means
-the facade-must-not-transitively-require-the-optional-dep rule is harder to
-satisfy, and `-prepare-opts` must reproduce the context injection. Do the
-standalone engines first (`:core-async.iterative-scheduling`, `:async.manifold`,
-`:async.virtual-futures`). Ask a human before attempting the applicative family.
+injects a per-engine "context" (the applicative instance — the monad) resolved
+from an optional namespace. Because the shared impl is already generic over that
+context, the three engines are **not** three deftypes — they are ONE:
+`nodely.engine.applicative.engine/ApplicativeEngine`, a two-field deftype
+`[context-sym enable-deref-delay]` living in a namespace that requires only
+`nodely.engine.protocols`. Three zero-arg factory fns
+(`->promesa-applicative-engine`, `->core-async-applicative-engine`,
+`->virtual-future-applicative-engine`) construct the one type with the right
+context symbol + gate. Read `engine.clj` as the worked example.
+
+Key points specific to this family:
+
+- **All three are channel-SUPPORTING** (this retires the old claim that
+  `:applicative.promesa` was channel-less). `-eval-key-channel-supported?` is a
+  constant `true`; all three v0 entries carry `::eval-key-channel true`.
+- **`-prepare-opts`** injects the context as the fully-qualified literal keyword
+  `:nodely.engine.applicative/context` (NOT `::context` — this ns has no alias to
+  the shared impl), resolving the context lazily via
+  `(var-get (requiring-resolve context-sym))` after the gate has confirmed the
+  optional lib.
+- **`redeem` — how `eval-key-channel` delivers exceptions.** The shared
+  `nodely.engine.applicative/eval-key-channel` used to do
+  `(app/fmap (partial async/put! chan) contextual-v)`, which **deadlocks** on a
+  failed node: every applicative verb except `extract` conveys the throwable AS
+  its monadic value WITHOUT invoking the fn, so on error `put!` never runs and a
+  reader of the channel blocks forever. The fix is `redeem` (named per
+  cats-effect): the non-blocking, *ungated* sibling of `extract` — it invokes the
+  fn on the resolved monadic value whether that value is a success OR the
+  throwable. `eval-key-channel` is now
+  `(app/redeem (partial async/put! chan) contextual-v)`. `-redeem` is a new
+  protocol (`applicative/protocols.clj`) with a per-context impl, each using its
+  native non-blocking completion (no new OS threads):
+  - core-async: `(go-future (f (<! mv)))` — raw parking `<!` (not `<?`), so the
+    throwable arrives as a value;
+  - promesa: `(pp/-handle mv (fn [v e] (f …)))`;
+  - virtual-future: `(vfuture (f (try (deref-unwrapped mv) (catch Throwable t t))))`
+    — its native `vfuture`.
+  The delivered exception is the ORIGINAL throwable (ex-data intact), matching how
+  the sync `eval-key` (via `extract`) surfaces it and how the
+  `:core-async.lazy-scheduling` engine delivers channel errors. Regression test:
+  `applicative-eval-key-channel-delivers-exceptions` in `api_test.clj`.
+- **`promesa-failure` was removed from `v0.clj`** — once all applicative engines
+  became protocol engines it had zero remaining consumers. `core-async-failure`
+  (used by `>channel-leaf`), `virtual-future-failure` (`:async.virtual-futures`),
+  and `manifold-failure` (`:async.manifold`) stay.
+
+Remaining standalone engines still to migrate: `:async.manifold` (channel-less,
+PITFALL 3b) and `:async.virtual-futures` (channel-supporting).
 
 ---
 

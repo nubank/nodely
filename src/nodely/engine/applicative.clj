@@ -87,7 +87,7 @@
   [env k opts]
   (let [contextual-v (eval-key-contextual env k opts)
         chan         (async/promise-chan)]
-    (app/fmap (partial async/put! chan) contextual-v)
+    (app/redeem (partial async/put! chan) contextual-v)
     chan))
 
 (defn eval

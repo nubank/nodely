@@ -47,6 +47,14 @@
   (let [ctx (infer fv)]
     (p/-fmap ctx f fv)))
 
+(defn redeem
+  "Invoke `f` on the resolved value of `mv`, or on the throwable if `mv` failed.
+  Unlike fmap/bind, `f` runs on BOTH the success and error branches. Returns a
+  monadic value in the context of `mv`."
+  [f mv]
+  (let [ctx (infer mv)]
+    (p/-redeem ctx f mv)))
+
 ;; MONAD STUFF
 (defn bind
   "Given a monadic value `mv` and a function `f`,
