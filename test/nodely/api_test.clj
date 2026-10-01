@@ -62,7 +62,7 @@
 (defn ensure-unrealized-delay
   [sym]
   (when (realized? (deref (resolve sym)))
-    (require :reload '[nodely.api.v0])))
+    (require :reload (symbol (namespace sym)))))
 
 (defn- testing-require-delay-call
   [ns-sym delay message cause call-fn]
@@ -75,7 +75,7 @@
                              (apply orig-require args)))
             res          (with-redefs [require bomb]
                            (call-fn))]
-        (require :reload 'nodely.api.v0)
+        (require :reload (symbol (namespace delay)))
         res)))
 
 (defmacro testing-require-delay
@@ -86,7 +86,7 @@
 (t/deftest engine-without-support
   (t/testing "engines blowing up"
     (testing-require-delay
-     nodely.engine.virtual-workers nodely.api.v0/virtual-future-failure
+     nodely.engine.virtual-workers nodely.engine.applicative.engine/virtual-future-enable-deref
      "Kaboom! We're not on JVM 21 for pretend" :test-virtual-future-failure
      (t/testing "without virtual futures in the JVM"
        (t/testing "attempting to use virtual futures"
@@ -100,7 +100,21 @@
           5
           (async/<!! (api/eval-key-channel env :z {::api/engine :core-async.lazy-scheduling}))))))
     (testing-require-delay
-     nodely.engine.core-async.core nodely.api.v0/core-async-failure
+     nodely.engine.virtual-workers nodely.engine.async.virtual-futures-engine/enable-deref
+     "Kaboom! We're not on JVM 21 for pretend" :test-virtual-future-failure
+     (t/testing "without virtual futures in the JVM"
+       (t/testing "attempting to use virtual futures"
+         (t/matching
+          #"Classloader could not locate `java.util.concurrent.ThreadPerTaskExecutor`"
+          (try (api/eval-key-channel env :z {::api/engine :async.virtual-futures})
+               (catch Throwable t
+                 (ex-message t)))))
+       (t/testing "attempting to use core.async"
+         (t/matching
+          5
+          (async/<!! (api/eval-key-channel env :z {::api/engine :core-async.lazy-scheduling}))))))
+    (testing-require-delay
+     nodely.engine.core-async.lazy-scheduling nodely.engine.core-async.lazy-scheduling-engine/enable-deref
      "Kaboom! We don't have core.async for pretend" :test-core-async-failure
      (t/testing "without core.async on the classpath"
        (t/testing "attempting to use core.async"
@@ -114,7 +128,7 @@
           5
           (api/eval-key env :z {::api/engine :async.manifold})))))
     (testing-require-delay
-     nodely.engine.manifold nodely.api.v0/manifold-failure
+     nodely.engine.manifold nodely.engine.async.manifold-engine/enable-deref
      "Kaboom! We don't have manifold for pretend" :test-manifold-failure
      (t/testing "without manifold on the classpath"
        (t/testing "attempting to use manifold"
@@ -128,7 +142,7 @@
           5
           (async/<!! (api/eval-key-channel env :z {::api/engine :core-async.lazy-scheduling}))))))
     (testing-require-delay
-     nodely.engine.applicative.promesa nodely.api.v0/promesa-failure
+     nodely.engine.applicative.promesa nodely.engine.applicative.engine/promesa-enable-deref
      "Kaboom! We don't have promesa for pretend" :test-promesa-failure
      (t/testing "attempting to use promesa without promesa on the classpath"
        (t/testing "attempting to use promesa"
@@ -163,7 +177,9 @@
       (t/testing "evaling an env where all referred nodes exist works"
         (t/matching 5 (api/eval-node env (>leaf ?z) {::api/engine engine-key})))
       (t/testing "eval-key an env where all referred nodes exist works"
-        (t/matching 5 (api/eval-key env :z {::api/engine engine-key}))))
+        (t/matching 5 (api/eval-key env :z {::api/engine engine-key})))
+      (t/testing "eval a full env where all referred nodes exist works"
+        (t/matching 5 (api/get-value (api/eval env :z {::api/engine engine-key}) :z))))
 
     (t/testing "eval-node-missing-node-exception-test"
       (t/testing "evaling an env where a key is missing raises an exception that assists diagnosing the problematic environment"
@@ -283,3 +299,40 @@
     (for [engine (set/difference (set (keys api/engine-data))
                                  remove-keys)]
       (with-try-engine-test-suite engine))))
+
+(t/deftest iterative-scheduling-eval-key-channel-unsupported
+  (t/testing "eval-key-channel is unsupported by :core-async.iterative-scheduling"
+    (t/matching #"does not support eval-key-channel"
+                (try (api/eval-key-channel env :z {::api/engine :core-async.iterative-scheduling})
+                     (catch UnsupportedOperationException e
+                       (ex-message e))))))
+
+(t/deftest iterative-scheduling-graceful-degradation
+  (t/testing "engine blowing up"
+    (testing-require-delay
+     nodely.engine.core-async.iterative-scheduling nodely.engine.core-async.iterative-scheduling-engine/enable-deref
+     "Kaboom! We don't have core.async for pretend" :test-core-async-failure
+     (t/testing "without core.async on the classpath"
+       (t/testing "attempting to use iterative-scheduling"
+         (t/matching
+          #"Could not locate core-async on classpath"
+          (try (api/eval env :z {::api/engine :core-async.iterative-scheduling})
+               (catch Throwable t
+                 (ex-message t)))))))))
+
+(t/deftest applicative-eval-key-channel-delivers-exceptions
+  (t/testing "applicative eval-key-channel delivers a deep node exception on the channel (not a deadlock)"
+    (let [vf-available? (try (import java.util.concurrent.ThreadPerTaskExecutor)
+                             true
+                             (catch Throwable _ false))
+          engines       (cond-> [:applicative.promesa :applicative.core-async]
+                          vf-available? (conj :applicative.virtual-future))]
+      (for [engine engines]
+        (t/testing (name engine)
+          (t/matching
+           #"Oops!"
+           (let [ch (api/eval-key-channel exceptions-all-the-way-down :d {::api/engine engine})
+                 v  (async/alt!! ch
+                                 ([x] x)
+                                 (async/timeout 5000) ([_] ::timeout))]
+             (if (instance? Throwable v) (ex-message v) v))))))))

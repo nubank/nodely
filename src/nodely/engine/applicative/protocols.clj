@@ -33,3 +33,9 @@
   "A type class to extract the
   value from a monad context."
   (-extract [mv] "Extract the value from monad context."))
+
+(defprotocol Redeem
+  (-redeem [ctx f mv]
+    "Invokes f on the resolved value of mv, or on the throwable mv failed with
+     (ungated -- f runs on BOTH the success and error branches). Returns a
+     monadic value in ctx."))
