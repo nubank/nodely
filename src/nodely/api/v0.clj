@@ -3,6 +3,8 @@
   (:require
    [nodely.data]
    [nodely.engine.applicative.engine :as engine.applicative.engine]
+   [nodely.engine.async.manifold-engine :as engine.async.manifold-engine]
+   [nodely.engine.async.virtual-futures-engine :as engine.async.virtual-futures-engine]
    [nodely.engine.core :as engine-core]
    [nodely.engine.core-async.iterative-scheduling-engine :as engine.core-async.iterative-scheduling-engine]
    [nodely.engine.core-async.lazy-scheduling-engine :as engine.core-async.lazy-scheduling-engine]
@@ -56,24 +58,14 @@
                                     nodely.engine.core-async.lazy-scheduling]
            :cause                 e}))))
 
-(def manifold-failure
-  (delay
-   (try (require 'nodely.engine.manifold)
-        (catch Exception e
-          {:msg                   "Could not locate manifold on classpath."
-           ::error                :missing-ns
-           ::requested-namespaces '[nodely.engine.manifold]
-           :cause                 e}))))
-
 (def engine-data
   {:core-async.lazy-scheduling      {::protocol-engine?     true
                                      ::instance-constructor engine.core-async.lazy-scheduling-engine/->CoreAsyncLazySchedulingEngine
                                      ::eval-key-channel     true}
    :core-async.iterative-scheduling {::protocol-engine?     true
                                      ::instance-constructor engine.core-async.iterative-scheduling-engine/->CoreAsyncIterativeSchedulingEngine}
-   :async.manifold                  {::ns-name              'nodely.engine.manifold
-                                     ::opts-fn              (constantly nil)
-                                     ::enable-deref         manifold-failure}
+   :async.manifold                  {::protocol-engine?     true
+                                     ::instance-constructor engine.async.manifold-engine/->AsyncManifoldEngine}
    :applicative.promesa             {::protocol-engine? true
                                      ::instance-constructor engine.applicative.engine/->promesa-applicative-engine
                                      ::eval-key-channel true}
