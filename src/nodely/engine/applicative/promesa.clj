@@ -41,4 +41,8 @@
     (-fapply [_ pf pv]
       (pp/-map (p/all [pf pv])
                (fn [[f v]]
-                 (f v))))))
+                 (f v))))
+
+    protocols/Redeem
+    (-redeem [_ f mv]
+      (pp/-handle mv (fn [v e] (f (if e (or (ex-cause e) e) v)))))))
