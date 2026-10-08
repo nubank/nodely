@@ -25,3 +25,7 @@
    (-eval-key-channel engine env k {}))
   ([engine env k opts]
    (-eval-key-channel engine env k opts)))
+
+(defn eval-key-channel-supported?
+  [engine]
+  (-eval-key-channel-supported? engine))

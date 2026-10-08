@@ -7,6 +7,7 @@
    [criterium.core :as criterium]
    [matcher-combinators.matchers :as matchers]
    [nodely.api.v0 :as api :refer [>leaf >sequence >value blocking]]
+   [nodely.engine.protocols :as engine.protocols]
    [nodely.test-helpers :as t]))
 
 (def env {:x (>value 2)
@@ -57,7 +58,9 @@
 
 (defn channel-interface
   [engine-key]
-  (get-in api/engine-data [engine-key ::api/eval-key-channel]))
+  (let [engine-fn (get api/engine-data engine-key)
+        engine    (engine-fn)]
+    (engine.protocols/eval-key-channel-supported? engine)))
 
 (defn ensure-unrealized-delay
   [sym]
