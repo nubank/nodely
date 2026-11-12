@@ -111,4 +111,9 @@
     (-fapply [_ pf pv]
       (go-future (let [f (<? pf)
                        v (<? pv)]
-                   (f v))))))
+                   (f v))))
+
+    protocols/Redeem
+    (-redeem [_ f mv]
+      (go-future (f (let [raw (async/<! mv)]
+                      (if (instance? Throwable raw) raw (nil-unguard raw))))))))

@@ -46,4 +46,8 @@
     (-fapply [_ pf pv]
       (vfuture (let [f (deref-unwrapped pf)
                      v (deref-unwrapped pv)]
-                 (f v))))))
+                 (f v))))
+
+    protocols/Redeem
+    (-redeem [_ f mv]
+      (vfuture (f (try (deref-unwrapped mv) (catch Throwable t t)))))))
