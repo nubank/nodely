@@ -199,6 +199,30 @@
     (is (match? #::data{:type :leaf :inputs #{:x :y} :fn ifn?}
                 (>leaf (+ ?x ?y))))))
 
+(deftest non-symbol-expression-leaves
+  (testing "?-prefixed string literals are not treated as inputs"
+    (is (match? #::data{:type :leaf :inputs #{} :fn ifn?}
+                (>leaf (str "?suffix" 42)))))
+  (testing "?-prefixed strings alongside real inputs"
+    (is (match? #::data{:type :leaf :inputs #{:id} :fn ifn?}
+                (>leaf (str "https://x/" ?id "?q=1"))))
+    (is (match? {:a #::data{:type :value :value "https://x/u1?q=1"}
+                 :id #::data{:type :value :value "u1"}}
+                (core/resolve :a {:a  (>leaf (str "https://x/" ?id "?q=1"))
+                                  :id (>value "u1")}))))
+  (testing "? character literals are not treated as inputs"
+    (is (match? {:a #::data{:type :value :value "?1"}}
+                (core/resolve :a {:a (>leaf (str \? "1"))}))))
+  (testing "?-prefixed strings inside >sequence fns are not treated as inputs"
+    (is (match? #::data{:type         :sequence
+                        :input        :a
+                        :process-node #::data{:type  :value
+                                              :value ifn?}}
+                (>sequence (fn [x] (str x "?flag")) ?a))))
+  (testing "real inputs are still found inside collections with ?-strings"
+    (is (match? #::data{:type :leaf :inputs #{:x} :fn ifn?}
+                (>leaf {:k ?x :s "?not-an-input"})))))
+
 (deftest value
   (testing "builds a value"
     (is (match? #::data{:type :value :value 1}
