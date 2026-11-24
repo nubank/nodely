@@ -7,7 +7,7 @@
 
 (defn- expression-symbols
   [expr]
-  (set (filter (complement seqable?) (tree-seq seqable? seq expr))))
+  (set (filter symbol? (tree-seq seqable? seq expr))))
 
 (defn- question-mark->keyword
   [s]
